@@ -1,22 +1,19 @@
-import express from "express";
-import connectDB from "./src/core/config/db.js";
 import dotenv from "dotenv";
-
 dotenv.config();
+import app from "./src/app.js";
+import connectDB from "./src/core/config/db.js";
 
-const app = express();
-app.use(express.json());
+
+const PORT = process.env.PORT || 5000;
 
 const startServer = async () => {
     try {
         await connectDB();
-
-        app.listen(process.env.PORT || 5000, () => {
-            console.log(`Server started on port ${process.env.PORT || 5000}`);
+        app.listen(PORT, () => {
+            console.log(`Server started on port ${PORT}`);
         });
-
     } catch (err) {
-        console.log("Mongoose Connection error", err);
+        console.log("Database connection error:", err.message);
     }
 };
 

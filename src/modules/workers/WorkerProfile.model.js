@@ -139,4 +139,4 @@ workerProfileSchema.methods.updateRating = async function() {
 };
 
 
-module.exports = mongoose.model("WorkerProfile", workerProfileSchema);
+export const Worker = mongoose.model("WorkerProfile", workerProfileSchema);

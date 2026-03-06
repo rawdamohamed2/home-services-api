@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import bcrypt from 'bcryptjs';
 
 const userSchema = new mongoose.Schema({
 
@@ -15,7 +16,10 @@ const userSchema = new mongoose.Schema({
         unique: true,
         sparse: true,
         lowercase: true,
-        match: [/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/, 'Please enter a valid email']
+        match: [
+            /^[a-zA-Z0-9][a-zA-Z0-9._%+-]*@(gmail\.com|yahoo\.com|yahoo\.co\.uk|yahoo\.fr|ymail\.com|rocketmail\.com)$/,
+            'Only Gmail and Yahoo email addresses are allowed'
+        ]
     },
 
     phone: {
@@ -56,6 +60,10 @@ const userSchema = new mongoose.Schema({
         default: false
     },
 
+    isOtpVerified: {
+        type: Boolean,
+        default: false
+    },
     isBlocked: {
         type: Boolean,
         default: false
@@ -94,13 +102,22 @@ const userSchema = new mongoose.Schema({
         }
     },
 
+    address: {
+        street: String,
+        city: String,
+        state: String,
+        country: String,
+        zipCode: String,
+        formattedAddress: String
+    },
+
     lastLogin: Date,
 
-    verificationCode: String,
-    verificationCodeExpires: Date,
+    verifyOtp: String,
+    verifyOtpExpires: Date,
 
-    resetPasswordCode: String,
-    resetPasswordExpires: Date
+    resetOtpCode: String,
+    resetOtpExpires: Date
 
 }, {
     timestamps: true,
@@ -110,12 +127,9 @@ const userSchema = new mongoose.Schema({
 
 
 userSchema.pre('save', async function(next) {
-    // لو كلمة السر متغيرتش، كمل من غير تشفير
-    if (!this.isModified('password')) return next();
-
-    // تشفير كلمة السر
-    this.password = await bcrypt.hash(this.password, 12);
-    next();
+    if (!this.isModified('password')) return;
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
 });
 
 userSchema.methods.comparePassword = async function(candidatePassword) {
@@ -124,15 +138,15 @@ userSchema.methods.comparePassword = async function(candidatePassword) {
 
 userSchema.methods.createVerificationCode = function() {
     const code = Math.floor(100000 + Math.random() * 900000).toString(); // 6 أرقام
-    this.verificationCode = code;
-    this.verificationCodeExpires = Date.now() + 10 * 60 * 1000; // 10 دقائق
+    this.verifyOtp = code;
+    this.verifyOtpExpires = Date.now() + 10 * 60 * 1000; // 10 دقائق
     return code;
 };
 
 userSchema.methods.createResetPasswordCode = function() {
     const code = Math.floor(100000 + Math.random() * 900000).toString();
-    this.resetPasswordCode = code;
-    this.resetPasswordExpires = Date.now() + 10 * 60 * 1000; // 10 دقائق
+    this.resetOtpCode = code;
+    this.resetOtpExpires = Date.now() + 10 * 60 * 1000; // 10 دقائق
     return code;
 };
 
@@ -154,9 +168,10 @@ userSchema.virtual('adminProfile', {
 
 // Indexes for better query performance
 userSchema.index({ location: "2dsphere" });
-userSchema.index({ email: 1 });
-userSchema.index({ phone: 1 });
+// userSchema.index({ email: 1 });
+// userSchema.index({ phone: 1 });
 userSchema.index({ role: 1 });
 userSchema.index({ isVerified: 1 });
 
-module.exports = mongoose.model("User", userSchema);
+const User = mongoose.models.User || mongoose.model('User', userSchema);
+export default User;

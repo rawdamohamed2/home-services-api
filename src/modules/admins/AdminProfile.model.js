@@ -61,4 +61,4 @@ adminSchema.methods.hasPermission = function(permission) {
     return this.permissions.includes(permission) || this.role === 'owner';
 };
 
-module.exports = mongoose.model("AdminProfile", adminSchema);
+export const Admin  = mongoose.model("AdminProfile", adminSchema);

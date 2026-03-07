@@ -23,11 +23,11 @@ authRouter.post('/logout', logout);
 authRouter.post('/send-verify-otp', protect, sendVerifyOtp);
 authRouter.post('/verify-account', protect, verifyEmail);
 
-authRouter.post('/is-auth', protect, isAuthenticated);
+authRouter.get('/is-auth', protect, isAuthenticated);
 
-authRouter.post('/forgot-password', protect, sendResetOtp);
-authRouter.post('/verify-reset-otp', protect, verifyResetOtp);
-authRouter.post('/reset-password', protect, resetPassword);
+authRouter.post('/forgot-password', sendResetOtp);
+authRouter.post('/verify-reset-otp', verifyResetOtp);
+authRouter.post('/reset-password', resetPassword);
 
 
 export default authRouter;

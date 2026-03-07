@@ -50,7 +50,6 @@ export const registerUser = async (req,res) => {
                 location,
                 profileImage,
                 role,
-                ...otherData
             }
         );
         await user.save();

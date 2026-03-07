@@ -149,4 +149,6 @@ walletSchema.statics.createForUser = async function(userId) {
 
     return wallet;
 };
-module.exports = mongoose.model("Wallet", walletSchema);
+
+const Wallet = mongoose.model("Wallet", walletSchema);
+export default Wallet;

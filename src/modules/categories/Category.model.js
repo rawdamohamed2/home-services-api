@@ -26,4 +26,5 @@ categorySchema.virtual('services', {
     count: true
 });
 
-module.exports = mongoose.model("Category", categorySchema);
+const Category = mongoose.model("Category", categorySchema);
+export default Category;

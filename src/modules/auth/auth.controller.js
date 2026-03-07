@@ -1,13 +1,55 @@
 import User from '../users/User.model.js';
+import Worker from '../workers/WorkerProfile.model.js';
+import Wallet from '../payments/Wallet.model.js';
 import ApiResponse from "../../core/utils/ApiResponse.js";
 import {generateToken} from "../../core/utils/generateToken.js";
 import {sendEmail} from "../../core/utils/sendEmail.js";
 
 export const register = async (req,res) => {
-    const {fullName, email, password, phone, enabledLocation, location, profileImage, role} = req.body;
+    const {fullName, email, password, phone, enabledLocation, location, profileImage, role, ...otherData} = req.body;
 
     if(!fullName || !email || !password || !phone || !role) {
         return ApiResponse.error(res,"fullName, email, password, phone and role are required");
+    }
+    if (role === "worker"){
+        if (
+            !otherData.categories?.length ||
+            !otherData.nationalIdFront ||
+            !otherData.nationalIdBack ||
+            !otherData.address.city
+        ){
+            return ApiResponse.error(
+                res,
+                "Worker fields are missing",
+            );
+        }
+        const isFurnitureMoving = otherData.categories?.some(cat =>
+            cat.includes('699a7d33e5d5066bdd58c9a8')
+            // cat.toString().includes('Moving') ||
+            // cat.toString().includes('نقل') ||
+            // cat.toString().includes('عفش')
+        );
+        if (isFurnitureMoving) {
+            if (!otherData.vehicleType){
+                return ApiResponse.error(
+                    res,
+                    "vehicleType is required",
+                );
+            }
+            if (!otherData.licenseImage){
+                return ApiResponse.error(
+                    res,
+                    "License Image is required",
+                );
+            }
+        }
+    }
+
+    if (role === "admin" || role === "moderator" || role === "owner"){
+        return ApiResponse.error(
+            res,
+            "admin can't register"
+        );
     }
 
     try {
@@ -19,16 +61,40 @@ export const register = async (req,res) => {
             return ApiResponse.conflict(res, 'User already exists with this email or phone');
         }
 
-        const user = new User({fullName, email, password, phone, enabledLocation, location, profileImage, role});
+        const user = new User(
+            {
+                fullName,
+                email,
+                password,
+                phone,
+                enabledLocation,
+                location,
+                profileImage,
+                role
+            }
+        );
         await user.save();
 
+        await Wallet.create({ owner: user._id });
+
+        if (role === "worker"){
+            const workerData = {
+                user: user._id,
+                categories: otherData.categories,
+                nationalIdFront: otherData.nationalIdFront,
+                nationalIdBack: otherData.nationalIdBack,
+                bio: otherData.bio || "",
+                experienceYears: otherData.experienceYears || 0,
+                vehicleType: otherData.vehicleType || "",
+                licenseImage: otherData.licenseImage || "",
+                availability: otherData.availability || []
+            };
+            await Worker.create(workerData);
+            console.log('worker successfully created');
+        }
+
         const token = generateToken(user._id);
-        // if(role === 'admin') {
-        //
-        // }
-        // if(role === 'worker') {
-        //
-        // }
+
         const data = {
             user: user,
             token: token,
@@ -44,8 +110,8 @@ export const register = async (req,res) => {
 
         await sendEmail(
             email,
-            "Welcome to Services",
-            `Welcome to our home services app. Your account has been created successfully.`
+            "Welcome to ServiGo",
+            `Welcome to our serviGo app. Your account has been created successfully.`
         );
 
         return ApiResponse.success(
@@ -247,7 +313,6 @@ export const isAuthenticated = async (req, res) => {
     }
 }
 
-
 export const verifyResetOtp  = async (req, res) => {
     const { userId, otp } = req.body;
     if (!userId || !otp) {
@@ -285,7 +350,6 @@ export const verifyResetOtp  = async (req, res) => {
         return ApiResponse.error(res,error.message);
     }
 }
-
 
 export const resetPassword = async (req, res) => {
     try {

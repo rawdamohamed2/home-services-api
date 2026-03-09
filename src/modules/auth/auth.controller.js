@@ -8,7 +8,7 @@ import {sendEmail} from "../../core/utils/sendEmail.js";
 export const registerUser = async (req,res) => {
     const {firstName, lastName, email, password, phone, enabledLocation, location, profileImage, ...otherData} = req.body;
     const role ='user';
-    if(!firstName || !lastName || !email || !password || !phone || !role) {
+    if(!firstName || !lastName || !email || !password || !phone) {
         return ApiResponse.error(res,"firstName, lastName, email, password and phone are required");
     }
     if(otherData.isVerified || otherData.isOtpVerified || otherData.isBlocked){
@@ -388,9 +388,7 @@ export const sendResetOtp = async (req, res) => {
         return ApiResponse.success(
             res,
             {
-                data:{
-                    id:user._id
-                }
+                id: user._id
             },
             "OTP Send successfully to your email"
         );
@@ -433,10 +431,7 @@ export const verifyResetOtp  = async (req, res) => {
 
         return ApiResponse.success(res,
             {
-                data: {
-                    verified: true,
-                    userId: user._id
-                }
+                id: user._id
             },
             "OTP verified successfully"
         );

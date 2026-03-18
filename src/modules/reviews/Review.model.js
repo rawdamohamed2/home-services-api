@@ -14,17 +14,17 @@ const reviewSchema = new mongoose.Schema({
     },
     worker: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "User",  // تعديل
+        ref: "User",
         required: [true, 'Worker is required']
     },
     rating: {
         type: Number,
         required: [true, 'Rating is required'],
-        min: [1, 'Rating must be at least 1'], // مش 0، مينفعش تقييم بصفر!
+        min: [1, 'Rating must be at least 1'],
         max: [5, 'Rating cannot exceed 5'],
         validate: {
             validator: function(v) {
-                return Number.isInteger(v * 10); // يسمح بنصف نجمة (4.5)
+                return Number.isInteger(v * 10);
             },
             message: 'Rating can be whole or half numbers'
         }
@@ -47,15 +47,13 @@ const reviewSchema = new mongoose.Schema({
 });
 
 
-reviewSchema.index({ booking: 1 }, { unique: true });
 
-// Indexes للبحث السريع
 reviewSchema.index({ worker: 1, rating: -1 });
 reviewSchema.index({ worker: 1, createdAt: -1 });
 reviewSchema.index({ rating: 1 });
 
 reviewSchema.post('save', async function() {
-    // تحديث متوسط تقييم العامل
+
     const WorkerProfile = mongoose.model('WorkerProfile');
     const workerProfile = await WorkerProfile.findOne({ user: this.worker });
 
@@ -131,4 +129,6 @@ reviewSchema.statics.getRatingStats = async function(workerId) {
 
     return stats[0] || { average: 0, total: 0 };
 };
-module.exports = mongoose.model("Review", reviewSchema);
+
+const Review = mongoose.models.Review || mongoose.model("Review", reviewSchema);
+export default Review;

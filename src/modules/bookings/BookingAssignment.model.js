@@ -130,6 +130,9 @@ bookingAssignmentSchema.methods.reject = async function(reason) {
     return this;
 };
 
+bookingAssignmentSchema.virtual('timeLeft').get(function() {
+    return Math.max(0, this.expiryTime - new Date());
+});
 // Statics
 bookingAssignmentSchema.statics.sendToWorkers = async function(bookingId, workerIds, priority = 1) {
     const assignments = workerIds.map((workerId, index) => ({
@@ -144,4 +147,7 @@ bookingAssignmentSchema.statics.sendToWorkers = async function(bookingId, worker
     return await this.insertMany(assignments);
 };
 
-module.exports = mongoose.model("BookingAssignment", bookingAssignmentSchema);
+const BookingAssignment = mongoose.models.BookingAssignment ||
+    mongoose.model('BookingAssignment', bookingAssignmentSchema);
+export default BookingAssignment;
+

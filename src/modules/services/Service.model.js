@@ -97,4 +97,5 @@ serviceSchema.index({ category: 1 });
 serviceSchema.index({ isActive: 1 });
 serviceSchema.index({ basePrice: 1 });
 
-module.exports = mongoose.model("Service", serviceSchema);
+const Service = mongoose.models.Service || mongoose.model('Service', serviceSchema);
+export default Service;

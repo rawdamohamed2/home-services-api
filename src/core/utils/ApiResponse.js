@@ -1,4 +1,3 @@
-
 class ApiResponse {
     // Success response
     static success(res, data = null, message = 'Success', statusCode = 200) {
@@ -23,6 +22,48 @@ class ApiResponse {
         if (errors) response.errors = errors;
 
         return res.status(statusCode).json(response);
+    }
+
+    static handleMongooseError(res, error) {
+
+        if (error.name === 'ValidationError') {
+            const errors = [];
+
+            for (let field in error.errors) {
+                errors.push({
+                    field: field,
+                    message: error.errors[field].message
+                });
+            }
+
+            return res.status(400).json({ errors });
+        }
+
+        if (error.code === 11000) {
+            const field = Object.keys(error.keyPattern)[0];
+            return res.status(409).json({
+                errors: [{
+                    field: field,
+                    message: `${field} already exists`
+                }]
+            });
+        }
+
+        return res.status(500).json({
+            errors: [{
+                field: 'server',
+                message: error.message || 'Internal server error'
+            }]
+        });
+    }
+
+    static validationError(res, errors = []) {
+        return res.status(400).json({
+            success: false,
+            statusCode:400,
+            errors: errors,
+            timestamp: new Date().toISOString()
+        });
     }
 
     // 400 Bad Request
@@ -55,5 +96,4 @@ class ApiResponse {
         return this.error(res, message, 500);
     }
 }
-
 export default ApiResponse;

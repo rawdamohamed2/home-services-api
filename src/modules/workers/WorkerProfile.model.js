@@ -4,14 +4,14 @@ const workerProfileSchema = new mongoose.Schema({
 
     user: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "users",
+        ref: "User",
         required: true,
         unique: true
     },
 
     bio: {
         type: String,
-        maxlength: [500, 'Bio is too long']
+        maxlength: [500, 'Bio cannot exceed 500 characters']
     },
 
     categories: [
@@ -25,8 +25,12 @@ const workerProfileSchema = new mongoose.Schema({
     experienceYears: {
         type: Number,
         default: 0,
-        min: [0, 'Experience years cannot be negative'],
-        max: [70, 'Experience years seems unrealistic']
+        min: 0,
+        max: 70
+    },
+    city:{
+        type:String,
+        required:[ true, "the city is required" ],
     },
 
     nationalIdFront: {
@@ -47,7 +51,7 @@ const workerProfileSchema = new mongoose.Schema({
     approvalStatus: {
         type: String,
         enum: {
-            values: ["pending", "approved", "rejected"],
+            values: ["pending", "approved", " Suspended", "rejected"],
             message: 'Invalid approval status'
         },
         default: "pending"
@@ -75,8 +79,6 @@ const workerProfileSchema = new mongoose.Schema({
         type: Number,
         default: 0
     },
-
-    isAvailable: { type: Boolean, default: false },
 
     availability: [
         {

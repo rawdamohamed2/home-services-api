@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
+import ApiResponse from "../../core/utils/ApiResponse.js";
 
 const userSchema = new mongoose.Schema({
 
@@ -45,7 +46,32 @@ const userSchema = new mongoose.Schema({
     password: {
         type: String,
         required: [true, 'Password is required'],
-        minlength: [6, 'Password must be at least 6 characters'],
+        validate: [
+            {
+                validator: function(v) {
+                    return v && v.length >= 6;
+                },
+                message: 'Password must be at least 6 characters'
+            },
+            {
+                validator: function(v) {
+                    return /[A-Z]/.test(v);
+                },
+                message: 'Password must contain uppercase letter'
+            },
+            {
+                validator: function(v) {
+                    return /[@\-$]/.test(v);
+                },
+                message: 'Password must contain @, -, or $'
+            },
+            {
+                validator: function(v) {
+                    return /[0-9]/.test(v);
+                },
+                message: 'Password must contain number'
+            }
+        ],
         select: false
     },
 
@@ -60,7 +86,7 @@ const userSchema = new mongoose.Schema({
 
     profileImage: {
         type: String,
-        default: 'default-avatar.png'
+        default: 'https://res.cloudinary.com/dlbgzpo7s/image/upload/v1773087860/user-profile-icon-vector-avatar-600nw-2558760599_czvcso.webp'
     },
 
     isVerified: {
@@ -109,20 +135,7 @@ const userSchema = new mongoose.Schema({
         }
     },
 
-    address: {
-        street: String,
-        // city: {
-        //     type: String,
-        //     required: function () {
-        //         return this.role === "worker";
-        //     }
-        // },
-        city: String,
-        state: String,
-        country: String,
-        zipCode: String,
-        formattedAddress: String
-    },
+    address: String,
 
     lastLogin: Date,
 
@@ -146,7 +159,13 @@ userSchema.pre('save', async function(next) {
 });
 
 userSchema.methods.comparePassword = async function(candidatePassword) {
-    return await bcrypt.compare(candidatePassword, this.password);
+    const isMatch = await bcrypt.compare(candidatePassword, this.password);
+
+    if (!isMatch) {
+        throw new Error("Invalid password");
+    }
+
+    return true;
 };
 
 userSchema.methods.createVerificationCode = function() {
@@ -161,6 +180,12 @@ userSchema.methods.createResetPasswordCode = function() {
     this.resetOtpCode = code;
     this.resetOtpExpires = Date.now() + 10 * 60 * 1000; // 10 دقائق
     return code;
+};
+
+userSchema.methods.checkBlock = function() {
+    if (this.isBlocked) {
+        throw new Error("Your account has been blocked");
+    }
 };
 
 // Virtual populate for WorkerProfile
@@ -181,8 +206,6 @@ userSchema.virtual('adminProfile', {
 
 // Indexes for better query performance
 userSchema.index({ location: "2dsphere" });
-// userSchema.index({ email: 1 });
-// userSchema.index({ phone: 1 });
 userSchema.index({ role: 1 });
 userSchema.index({ isVerified: 1 });
 

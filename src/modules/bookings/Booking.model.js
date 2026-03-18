@@ -16,7 +16,6 @@ const bookingSchema = new mongoose.Schema({
     worker: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
-        required: [true, 'Worker is required']
     },
 
     status: {
@@ -129,4 +128,5 @@ bookingSchema.index({ worker: 1, status: 1 });
 bookingSchema.index({ scheduledDate: 1 });
 bookingSchema.index({ status: 1 });
 
-module.exports = mongoose.model("bookings", bookingSchema);
+const Booking = mongoose.models.Booking || mongoose.model('Booking', bookingSchema);
+export default Booking;

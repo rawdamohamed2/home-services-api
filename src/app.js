@@ -4,6 +4,7 @@ import express from "express";
 import './modules/categories/category.model.js';
 import authRoutes from './modules/auth/auth.route.js';
 import workerRoutes from './modules/workers/worker.route.js';
+import Category from './modules/categories/Category.model.js';
 
 import mongoose from "mongoose";
 const app = express();

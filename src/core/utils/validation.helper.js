@@ -21,7 +21,7 @@ export const messages = {
 
 export const phoneRegex = /^(0?1[0125][0-9]{8})$/;
 export const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
-export const allowedDomains = ['gmail.com', 'yahoo.com', 'yahoo.co.uk', 'yahoo.fr', 'ymail.com', 'rocketmail.com'];
+export const passwordPattern = new RegExp(`^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[!@#$%^&*()_+={}\\[\\]|\\\\:;"\'<>,.?/~]).{8,64}$`);
 export const validDays = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 
 

@@ -1,8 +1,6 @@
 import Joi from "joi";
-import {phoneRegex, validDays, timeRegex} from "../core/utils/validation.helper.js";
-import {resetPassword} from "../modules/auth/auth.controller.js";
-import {availabilityStatusSchema} from "./worker.validation.js";
-const VEHICLE_CATEGORY_ID = "699a7d33e5d5066bdd58c9a8";
+import {phoneRegex, validDays, timeRegex, passwordPattern} from "../core/utils/validation.helper.js";
+
 
 export const baseRegisterSchema = Joi.object({
     firstName: Joi
@@ -43,11 +41,11 @@ export const baseRegisterSchema = Joi.object({
         .trim()
         .required()
         .min(6)
-        .pattern(new RegExp('^(?=.*[A-Z])(?=.*[0-9])(?=.*[@\\-$])[a-zA-Z0-9@\\-$]{6,30}$'))
+        .pattern(passwordPattern)
         .messages({
             "string.min": "Password must be at least 6 characters",
             "any.required": "Password is required",
-            "string.pattern.base": "Password must contain uppercase letter, number and @ or - or $"
+            "string.pattern.base": "Password must be 8 to 64 characters long and include at least one uppercase letter, one lowercase letter, one number, and one special character."
         }),
     phone: Joi
         .string()
@@ -144,7 +142,7 @@ export const workerRegisterSchema = baseRegisterSchema.keys({
         }),
 
     vehicleType: Joi.when("categories", {
-        is: Joi.array().has(Joi.valid(VEHICLE_CATEGORY_ID)),
+        is: Joi.array().has(Joi.valid(process.env.VEHICLE_CATEGORY_ID)),
         then: Joi.string()
             .valid("truck", "van", "pickup")
             .required()
@@ -157,7 +155,7 @@ export const workerRegisterSchema = baseRegisterSchema.keys({
     }),
 
     licenseImage: Joi.when("categories", {
-        is: Joi.array().has(Joi.valid(VEHICLE_CATEGORY_ID)),
+        is: Joi.array().has(Joi.valid(process.env.VEHICLE_CATEGORY_ID)),
         then: Joi.string()
             .uri()
             .required()

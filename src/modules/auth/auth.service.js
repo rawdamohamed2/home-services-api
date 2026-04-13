@@ -1,6 +1,6 @@
 import User from '../users/user.model.js';
 import Worker from '../workers/WorkerProfile.model.js';
-import Wallet from '../payments/wallet.model.js';
+import Wallet from '../payments/Wallet.model.js';
 import {sendEmail} from "../../core/utils/sendEmail.js";
 import {generateToken} from "../../core/utils/generateToken.js";
 import {normalizePhone} from "../../core/utils/normalizePhone.js";

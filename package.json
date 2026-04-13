@@ -7,6 +7,9 @@
     "start": "node server.js",
     "dev": "nodemon server.js"
   },
+  "engines": {
+    "node": "20.x"
+  },
   "keywords": [],
   "author": "Rawda",
   "license": "ISC",
@@ -25,7 +28,8 @@
     "helmet": "^8.1.0",
     "joi": "^18.0.2",
     "jsonwebtoken": "^9.0.3",
-    "mongoose": "^9.2.4",
+    "mongodb": "^7.1.0",
+    "mongoose": "^8.23.0",
     "morgan": "^1.10.1",
     "multer": "^2.1.1",
     "nodemailer": "^8.0.1",

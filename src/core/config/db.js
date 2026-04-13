@@ -1,25 +1,6 @@
-//import mongoose from 'mongoose';
+import mongoose from 'mongoose';
 import dotenv from "dotenv";
 dotenv.config();
-
-// async function connectDB(){
-//
-//     if (mongoose.connection.readyState === 1) {
-//         return;
-//     }
-//     try {
-//         console.log(process.env.MONGO_URL);
-//         const db = await mongoose.connect(process.env.MONGO_URL, {
-//             serverSelectionTimeoutMS: 5000,
-//         });
-//         console.log(`Connected to MongoDB! Host: ${db.connection.host}`);
-//     } catch (err) {
-//         console.log("Mongoose Connection error", err);
-//         //process.exit(1);
-//     }
-// }
-import mongoose from 'mongoose';
-
 
 let cached = global.mongoose;
 
@@ -40,9 +21,10 @@ async function connectDB() {
 
     try {
         cached.conn = await cached.promise;
-        console.log("Connected to MongoDB");
+        console.log(`Connected to MongoDB!`);
     } catch (e) {
         cached.promise = null;
+        console.log("Mongoose Connection error", e);
         throw e;
     }
 

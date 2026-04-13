@@ -28,7 +28,7 @@ export const protect = async (req, res, next) => {
         }
         next();
     } catch (err) {
-        return ApiResponse.unauthorized(res, "Not authorized, token failed" );
+        return ApiResponse.unauthorized(res, err.message || err );
     }
 };
 

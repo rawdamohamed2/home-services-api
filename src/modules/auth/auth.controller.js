@@ -26,13 +26,15 @@ const sendAuthResponse = (res, user, token, message, extraData = {}) => {
 
 export const registerUser = async (req,res) => {
     const session = await mongoose.startSession();
-    session.startTransaction();
     try {
+        session.startTransaction();
         const { email, phone } = req.body;
         await checkExistingUser(email, phone);
         const user = await createBaseAccount(req.body, 'user', session);
         const { token } = await prepareAuthData(user);
-        await sendAuthResponse(res, user, token, "user created successfully", null);
+
+        await session.commitTransaction();
+        return sendAuthResponse(res, user, token, "user created successfully");
     }
     catch(error) {
         await session.abortTransaction();
@@ -45,42 +47,23 @@ export const registerUser = async (req,res) => {
 
 export const registerWorker = async (req,res) => {
     const session = await mongoose.startSession();
-    session.startTransaction();
     try {
+        session.startTransaction();
         const {firstName, lastName, email, password, phone, enabledLocation, location, profileImage, ...otherData} = req.body;
         await checkExistingUser(email, phone);
 
-        const userData = {
-            firstName,
-            lastName,
-            email,
-            password,
-            phone,
-            enabledLocation,
-            location,
-            profileImage,
-            role: 'worker'
-        }
-
+        const userData = { firstName, lastName, email, password, phone, enabledLocation, location, profileImage, role: 'worker' };
         const user = await createBaseAccount(userData, 'worker', session);
 
-        const workerData = {
-            user: user._id,
-            ...otherData
-        };
-
+        const workerData = { user: user._id, ...otherData };
         const worker = await createWorkerAccount(workerData, session);
-
         const { token } = await prepareAuthData(user);
 
-        const data = {
-            user: user,
-            workerData: worker,
-        }
-
-        await sendAuthResponse(res, data, token, "Worker created successfully", null);
+        await session.commitTransaction();
+        return sendAuthResponse(res, { user, workerData: worker }, token, "Worker created successfully");
     }
     catch(error) {
+        await session.abortTransaction();
         return ApiResponse.validationError(res, error.message);
     }
     finally {
@@ -89,25 +72,24 @@ export const registerWorker = async (req,res) => {
 };
 
 export const login = async (req,res) => {
-    const session = await mongoose.startSession();
-    session.startTransaction();
+
     try {
         const {email, password} = req.body;
         const user = await User.findOne({ email }).select('+password');
+
         if (!user) {
-            return ApiResponse.error(res,"User not exists with this email");
+            return ApiResponse.error(res,"User does not exist with this email");
         }
+
         await user.comparePassword(password);
         user.checkBlock();
         await updateLastLogin(user);
+
         const { token } = await prepareAuthData(user);
-        await sendAuthResponse(res, user, token,"user Login successfully",null);
+        return sendAuthResponse(res, user, token,"user Login successfully");
     }
     catch (error) {
         return ApiResponse.error(res,error.message);
-    }
-    finally {
-        session.endSession();
     }
 };
 

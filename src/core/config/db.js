@@ -1,16 +1,17 @@
 import mongoose from 'mongoose';
 import dotenv from "dotenv";
 dotenv.config();
-let isConnected = false;
+
 
 async function connectDB(){
-    if (isConnected) {
+    if (mongoose.connection.readyState === 1) {
         return;
     }
     try {
         console.log(process.env.MONGO_URL);
-        const db = await mongoose.connect(process.env.MONGO_URL);
-        isConnected = db.connections[0].readyState;
+        const db = await mongoose.connect(process.env.MONGO_URL, {
+            serverSelectionTimeoutMS: 5000,
+        });
         console.log(`Connected to MongoDB! Host: ${db.connection.host}`);
     } catch (err) {
         console.log("Mongoose Connection error", err);

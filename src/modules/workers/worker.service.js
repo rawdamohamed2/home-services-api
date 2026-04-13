@@ -54,15 +54,21 @@ export const fetchWorkerById = async (id) => {
     if (!mongoose.Types.ObjectId.isValid(id)) {
         throw new Error('Invalid Worker ID format');
     }
-    const workerProfile = await WorkerProfile.findOne({ user: id })
+    const workerProfile = await WorkerProfile.findOne({
+        $or: [
+            { _id: id },
+            { user: id }
+        ]
+    })
         .select('bio experienceYears city approvalStatus ratingAverage availability isAvailable')
-        .populate('user', 'firstName lastName email phone profileImage address')
+        .populate('user', 'firstName lastName email phone profileImage address isBlocked') // أضفت isBlocked هنا للتأكد
         .populate('categories', 'name');
 
     if (!workerProfile) {
         throw new Error('No worker profile found.');
     }
-    if (workerProfile.user.isBlocked) {
+
+    if (workerProfile.user && workerProfile.user.isBlocked) {
         throw new Error('This worker account is currently suspended.');
     }
 

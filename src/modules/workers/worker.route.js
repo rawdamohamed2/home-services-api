@@ -89,7 +89,8 @@ workerRouter.get('/me',
 );
 workerRouter.get('/:id',
     validate(getWorkerByIdSchema),
-    getWorkerById);
+    getWorkerById
+);
 
 workerRouter.get('/',
     validate(workerSearchSchema),

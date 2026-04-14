@@ -16,7 +16,6 @@ export const getUserProfile = async (userId) => {
         throw new Error('User not found');
     }
 
-    
     const workerProfile = await WorkerProfile.findOne({ user: userId })
         .select('bio categories experienceYears city approvalStatus ratingAverage completedJobs availability availabilityStatus')
         .populate('categories', 'name')
@@ -27,7 +26,6 @@ export const getUserProfile = async (userId) => {
         workerProfile: workerProfile || null
     };
 };
-
 
 export const updateUser = async (userId, updateData) => {
     const session = await mongoose.startSession();
@@ -41,7 +39,6 @@ export const updateUser = async (userId, updateData) => {
             throw new Error('User not found');
         }
 
-        
         if (firstName) user.firstName = firstName;
         if (lastName) user.lastName = lastName;
         
@@ -74,7 +71,6 @@ export const updateUser = async (userId, updateData) => {
 
         await user.save({ session });
 
-        
         if (location || enabledLocation !== undefined) {
             await WorkerProfile.findOneAndUpdate(
                 { user: userId },
@@ -84,8 +80,6 @@ export const updateUser = async (userId, updateData) => {
         }
 
         await session.commitTransaction();
-
-        
         return await getUserProfile(userId);
     } catch (error) {
         await session.abortTransaction();
@@ -95,24 +89,20 @@ export const updateUser = async (userId, updateData) => {
     }
 };
 
-
 export const changeUserPassword = async (userId, currentPassword, newPassword) => {
     const user = await User.findById(userId).select('+password');
     if (!user) {
         throw new Error('User not found');
     }
 
-    
     const isMatch = await bcrypt.compare(currentPassword, user.password);
     if (!isMatch) {
         throw new Error('Current password is incorrect');
     }
 
-    
     user.password = newPassword;
     await user.save();
 
-    
     await sendEmail(
         user.email,
         'Password Changed Successfully',
@@ -121,7 +111,6 @@ export const changeUserPassword = async (userId, currentPassword, newPassword) =
 
     return { message: 'Password changed successfully' };
 };
-
 
 export const uploadProfileImage = async (userId, profileImage) => {
     const user = await User.findById(userId);
@@ -135,7 +124,6 @@ export const uploadProfileImage = async (userId, profileImage) => {
     return { profileImage: user.profileImage };
 };
 
-
 export const deleteProfileImage = async (userId) => {
     const user = await User.findById(userId);
     if (!user) {
@@ -148,52 +136,3 @@ export const deleteProfileImage = async (userId) => {
     return { message: 'Profile image deleted successfully' };
 };
 
-
-export const deleteUserAccount = async (userId, reason) => {
-    const session = await mongoose.startSession();
-    session.startTransaction();
-
-    try {
-        const user = await User.findById(userId).session(session);
-        if (!user) {
-            throw new Error('User not found');
-        }
-
-        
-        user.isBlocked = true;
-        await user.save({ session });
-
-        
-        await Wallet.findOneAndUpdate(
-            { owner: userId },
-            { isActive: false },
-            { session }
-        );
-
-        
-        await WorkerProfile.findOneAndUpdate(
-            { user: userId },
-            { 
-                approvalStatus: 'Suspended',
-                availabilityStatus: 'offline'
-            },
-            { session }
-        );
-
-        await session.commitTransaction();
-
-        
-        await sendEmail(
-            user.email,
-            'Account Deleted',
-            `Hello ${user.firstName},\n\nYour account has been successfully deleted.\nWe're sorry to see you go!`
-        );
-
-        return { message: 'Account deleted successfully' };
-    } catch (error) {
-        await session.abortTransaction();
-        throw error;
-    } finally {
-        session.endSession();
-    }
-};

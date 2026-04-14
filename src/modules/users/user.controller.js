@@ -4,10 +4,8 @@ import {
     updateUser,
     changeUserPassword,
     uploadProfileImage,
-    deleteProfileImage,
-    deleteUserAccount
+    deleteProfileImage
 } from './user.service.js';
-
 
 export const getMyProfile = async (req, res) => {
     try {
@@ -27,7 +25,6 @@ export const updateMyProfile = async (req, res) => {
     }
 };
 
-
 export const changePassword = async (req, res) => {
     try {
         const { currentPassword, newPassword } = req.body;
@@ -37,7 +34,6 @@ export const changePassword = async (req, res) => {
         return ApiResponse.error(res, error.message);
     }
 };
-
 
 export const uploadPhoto = async (req, res) => {
     try {
@@ -49,7 +45,6 @@ export const uploadPhoto = async (req, res) => {
     }
 };
 
-
 export const deletePhoto = async (req, res) => {
     try {
         const result = await deleteProfileImage(req.user._id);
@@ -59,22 +54,3 @@ export const deletePhoto = async (req, res) => {
     }
 };
 
-
-export const deleteAccount = async (req, res) => {
-    try {
-        const { reason } = req.body;
-        const result = await deleteUserAccount(req.user._id, reason);
-        
-        
-        res.cookie('token', "", {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
-            expires: new Date(0),
-        });
-        
-        return ApiResponse.success(res, result, 'Account deleted successfully');
-    } catch (error) {
-        return ApiResponse.error(res, error.message);
-    }
-};

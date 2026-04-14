@@ -4,26 +4,22 @@ import {
     updateMyProfile,
     changePassword,
     uploadPhoto,
-    deletePhoto,
-    deleteAccount
+    deletePhoto
 } from "./user.controller.js";
 import { protect } from "../../core/middleware/authMiddleware.js";
 import { validate } from "../../core/middleware/validate.js";
 import {
     updateProfileSchema,
     changePasswordSchema,
-    uploadPhotoSchema,
-    deleteAccountSchema
+    uploadPhotoSchema
 } from "../../validation/user.validation.js";
 
 const userRouter = Router();
-
 
 userRouter.get('/me',
     protect,
     getMyProfile
 );
-
 
 userRouter.patch('/me',
     protect,
@@ -31,13 +27,11 @@ userRouter.patch('/me',
     updateMyProfile
 );
 
-
 userRouter.post('/change-password',
     protect,
     validate(changePasswordSchema),
     changePassword
 );
-
 
 userRouter.post('/profile-image',
     protect,
@@ -45,17 +39,9 @@ userRouter.post('/profile-image',
     uploadPhoto
 );
 
-
 userRouter.delete('/profile-image',
     protect,
     deletePhoto
-);
-
-
-userRouter.delete('/me',
-    protect,
-    validate(deleteAccountSchema),
-    deleteAccount
 );
 
 export default userRouter;

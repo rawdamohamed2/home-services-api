@@ -52,7 +52,8 @@ const serviceSchema = new mongoose.Schema({
             },
             values: [{
                 type: Number,
-                min: 0
+                min: 0,
+                default:1
             }],
             pricePerUnit: {
                 type: Number,
@@ -79,17 +80,16 @@ serviceSchema.methods.calculatePrice = function(optionIndex, selectedValue) {
     const option = this.priceOptions[optionIndex];
     if (!option) return this.basePrice;
 
-    if (option.optionType === 'fixed') {
-        return option.values[0];
-    } else if (option.optionType === 'hourly') {
-        return selectedValue * option.pricePerUnit;
-    } else if (option.optionType === 'area') {
-        return selectedValue * option.pricePerUnit;
-    } else if (option.optionType === 'trip') {
-        return selectedValue * option.pricePerUnit;
+    switch (option.optionType) {
+        case 'fixed':
+            return option.values[0] || this.basePrice;
+        case 'hourly':
+        case 'area':
+        case 'trip':
+            return (selectedValue || 0) * (option.pricePerUnit || 0);
+        default:
+            return this.basePrice;
     }
-
-    return this.basePrice;
 };
 
 serviceSchema.index({ name: 'text', description: 'text' });

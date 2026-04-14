@@ -41,7 +41,7 @@ export const registerUser = async (req,res) => {
         return ApiResponse.error(res, error.message);
     }
     finally {
-        session.endSession();
+        await session.endSession();
     }
 };
 
@@ -67,7 +67,7 @@ export const registerWorker = async (req,res) => {
         return ApiResponse.validationError(res, error.message);
     }
     finally {
-        session.endSession();
+        await session.endSession();
     }
 };
 

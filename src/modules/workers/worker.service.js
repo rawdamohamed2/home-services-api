@@ -1,7 +1,6 @@
 import WorkerProfile from "./WorkerProfile.model.js";
 import User from "../users/user.model.js";
 import Booking from '../bookings/Booking.model.js';
-import Service from '../services/Service.model.js';
 import mongoose from "mongoose";
 import Wallet from '../payments/Wallet.model.js';
 import BookingAssignment from '../bookings/BookingAssignment.model.js';
@@ -81,6 +80,7 @@ export const updateWorkerFullProfile = async (userId, updateBody) => {
     try {
         const { firstName, email, phone, password, lastName, ...workerData } = updateBody;
         const user = await User.findById(userId).select('+password').session(session);
+
         if (!user) throw new Error('User not found');
 
         const normalizedPhone = normalizePhone(phone);

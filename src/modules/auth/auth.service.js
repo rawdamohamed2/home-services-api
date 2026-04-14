@@ -48,7 +48,7 @@ export const prepareAuthData = async (user, login ) => {
     return { token };
 };
 
-export const createWorkerAccount = async (workerData, session) => {
+export const createWorkerAccount = async (workerData) => {
 
     const worker = new Worker(
         {

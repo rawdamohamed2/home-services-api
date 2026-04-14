@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 const adminSchema = new mongoose.Schema({
     userId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "User", // غيرت من "User" لـ "User" للاتساق
+        ref: "User",
         required: true,
         unique: true
     },
@@ -61,4 +61,5 @@ adminSchema.methods.hasPermission = function(permission) {
     return this.permissions.includes(permission) || this.role === 'owner';
 };
 
-export const Admin  = mongoose.model("AdminProfile", adminSchema);
+const Admin = mongoose.models.AdminProfile || mongoose.model('AdminProfile', adminSchema);
+export default Admin;

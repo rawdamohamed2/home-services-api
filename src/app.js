@@ -6,6 +6,8 @@ import './modules/categories/Category.model.js';
 import authRoutes from './modules/auth/auth.route.js';
 import workerRoutes from './modules/workers/worker.route.js';
 import mongoose from "mongoose";
+import serviceRoutes from "./modules/services/Service.route.js";
+import adminRoutes from "./modules/admins/admin.route.js";
 
 const app = express();
 
@@ -17,6 +19,8 @@ app.use(express.json());
 console.log('📊 Registered models:', mongoose.modelNames());
 app.use('/api/auth', authRoutes);
 app.use('/api/workers', workerRoutes);
+app.use('/api/services', serviceRoutes);
+app.use('/api/admins', adminRoutes);
 
 app.get('/', (req, res) => {
     res.status(200).json({

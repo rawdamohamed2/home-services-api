@@ -49,7 +49,7 @@ const userSchema = new mongoose.Schema({
         validate: [
             {
                 validator: function(v) {
-                    return v && v.length >= 8;
+                    return v && v.length >= 8 && v.length <= 64;
                 },
                 message: 'Password must be between 8 and 64 characters'
             },
@@ -67,9 +67,9 @@ const userSchema = new mongoose.Schema({
             },
             {
                 validator: function(v) {
-                    return /[@\-$!%*?&]/.test(v);
+                    return /[!@#$%^&*()_+={}\[\]|\\:;"'<>,.?/~-]/.test(v);
                 },
-                message: 'Password must contain at least one special character: @, -, $, !, %, *, ?, or &'
+                message: 'Password must contain at least one special character'
             },
             {
                 validator: function(v) {

@@ -1,7 +1,9 @@
 import Joi from "joi";
 import {phoneRegex, timeRegex, validDays,passwordPattern} from "../core/utils/validation.helper.js";
 
-
+const objectIdRule = Joi.string()
+    .regex(/^[0-9a-fA-F]{24}$/)
+    .messages({ 'string.pattern.base': 'Invalid ID format' });
 
 export const workerSearchSchema = Joi.object({
     page: Joi
@@ -22,8 +24,8 @@ export const workerSearchSchema = Joi.object({
         .string()
         .trim()
         .optional()
-        .valid("Air Conditioner", "Cleaning", "Furniture Moving", "Carpentry", "Water Heater",
-            "Plumbing", "Electricity")
+        // .valid("Air Conditioner", "Cleaning", "Furniture Moving", "Carpentry", "Water Heater",
+        //     "Plumbing", "Electricity")
         .messages({
             'any.only': 'status must be one of Air Conditioner, Cleaning, Furniture Moving, Carpentry, Water Heater,\n' +
                 '            Plumbing, Electricity ',
@@ -37,15 +39,18 @@ export const workerSearchSchema = Joi.object({
             'any.only': 'status must be one of pending, approved, Suspended, rejected',
         })
         .optional(),
+    name:Joi
+        .string()
+        .min(4)
+        .optional(),
+
+    id:objectIdRule.optional()
 }).unknown(false);
 
 export const getWorkerByIdSchema = Joi.object({
-    id: Joi.string()
-        .regex(/^[0-9a-fA-F]{24}$/)
-        .required()
-        .messages({
-            'string.pattern.base': 'Invalid ID format'
-        })
+
+    id: objectIdRule.required()
+
 }).unknown(false);
 
 export const updateWorkerSchema = Joi.object({
@@ -103,17 +108,6 @@ export const updateWorkerSchema = Joi.object({
             "string.min": "Bio must be at least 20 characters",
             "string.max": "Bio cannot exceed 500 characters",
         }),
-}).unknown(false);
-
-export const uploadWorkerPhotoSchema = Joi.object({
-    profileImage: Joi.string()
-        .uri()
-        .trim()
-        .required()
-        .messages({
-            'string.uri': 'Please provide a valid image URL',
-            'any.required': 'Profile image is required'
-        })
 }).unknown(false);
 
 export const availabilityWorkerSchema = Joi.object({

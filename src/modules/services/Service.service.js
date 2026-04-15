@@ -102,31 +102,6 @@ export const deleteServiceOption = async (serviceId, optionId) => {
     }
 };
 
-export const updateServiceItemQuantity = async (serviceId, optionId, quantity) => {
-    try {
-        const updatedService = await Service.findOneAndUpdate(
-            {
-                _id: serviceId,
-                "priceOptions._id": optionId
-            },
-            {
-                $set: {
-                    "priceOptions.$.quantity": +quantity
-                }
-            },
-            { new: true, runValidators: true }
-        );
-        if (!updatedService) {
-            throw new Error('Service or Option not found');
-        }
-
-        return updatedService;
-
-    }catch (e) {
-        throw new Error(e);
-    }
-};
-
 export const removeService = async (serviceId) => {
     try {
         const deletedService = await Service.findByIdAndDelete(
@@ -145,7 +120,7 @@ export const removeService = async (serviceId) => {
 
 export const fetchAllServices = async (filters) => {
     try {
-        const { page = 1, limit = 5, category, status } = filters;
+        const { page = 1, limit = 5, category, status, name, id} = filters;
         const query = {};
         const skip = (parseInt(page) - 1) * parseInt(limit);
 
@@ -160,6 +135,12 @@ export const fetchAllServices = async (filters) => {
             } else {
                 return { workers: [], total: 0, page: parseInt(page), limit: parseInt(limit) };
             }
+        }
+        if (name) {
+            query.name = { $regex: name, $options: 'i' };
+        }
+        if (id) {
+            query._id = id;
         }
 
         const [services, total] = await Promise.all([

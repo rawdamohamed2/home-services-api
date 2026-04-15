@@ -85,7 +85,7 @@ export const updateUser = async (userId, updateData) => {
         await session.abortTransaction();
         throw error;
     } finally {
-        session.endSession();
+        await session.endSession();
     }
 };
 

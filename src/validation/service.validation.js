@@ -171,4 +171,12 @@ export const searchServicesValidation =  Joi.object({
     status:Joi
         .boolean()
         .optional(),
-})
+
+    name:Joi
+        .string()
+        .min(4)
+        .optional(),
+
+    id:objectIdRule.optional()
+
+}).unknown(false);

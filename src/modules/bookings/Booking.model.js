@@ -18,6 +18,16 @@ const bookingSchema = new mongoose.Schema({
         ref: "User",
     },
 
+    selectedOptions: [
+        {
+            optionId: mongoose.Schema.Types.ObjectId,
+            optionName: String,
+            quantity: { type: Number, default: 1 },
+            unitPrice: Number, // السعر وقت الطلب
+            totalPrice: Number  // quantity * unitPrice
+        }
+    ],
+
     status: {
         type: String,
         enum: {
@@ -75,6 +85,11 @@ const bookingSchema = new mongoose.Schema({
         }
     },
 
+    totalAmount: {
+        type: Number,
+        required: true
+    },
+
     notes: {
         type: String,
         maxlength: [500, 'Notes too long']
@@ -106,6 +121,17 @@ bookingSchema.pre('save', function(next) {
             this.completedAt = new Date();
         }
     }
+    next();
+});
+
+bookingSchema.pre('save', function(next) {
+
+    const optionsTotal = this.selectedOptions.reduce((acc, option) => {
+        option.totalPrice = option.unitPrice * option.quantity;
+        return acc + option.totalPrice;
+    }, 0);
+
+    this.totalAmount = optionsTotal + (this.price || 0);
     next();
 });
 

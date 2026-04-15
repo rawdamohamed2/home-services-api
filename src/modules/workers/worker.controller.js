@@ -10,11 +10,9 @@ import {
     getWorkerBookings,
     getPendingAssignments,
     getWorkerReviews,
-    deleteProfileImage,
     updateGeoLocation,
     updateWorkerAvailability,
     updateAvailabilityStatus,
-    uploadProfileImage
 } from "./worker.service.js";
 
 export const getAllWorkers = async (req, res) => {
@@ -64,27 +62,6 @@ export const updateWorkerProfile = async (req, res) => {
     }
 };
 
-export const uploadWorkerPhoto = async (req, res) => {
-    try {
-        const { profileImage } = req.body;
-        await uploadProfileImage(req.user._id, profileImage);
-        return ApiResponse.success(res, 'Worker profile image uploaded successfully');
-    }
-    catch (error) {
-        return ApiResponse.error(res, error.message);
-    }
-};
-
-export const deleteWorkerPhoto = async (req, res) => {
-    try {
-        await deleteProfileImage(req.user._id);
-        return ApiResponse.success(res, 'Worker profile image deleted successfully');
-    }
-    catch (error) {
-        return ApiResponse.error(res, error.message);
-    }
-};
-
 export const updateAvailability = async (req, res) => {
     try {
         const { availability } = req.body;
@@ -98,8 +75,12 @@ export const updateAvailability = async (req, res) => {
 };
 
 export const getMe = async (req, res) => {
+    const userId = req.user._id;
+    if (!userId) {
+        return ApiResponse.error(res, 'User id not found');
+    }
     try {
-        const data = await getFullWorkerProfile(req.user._id);
+        const data = await getFullWorkerProfile(userId);
         return ApiResponse.success(res, data, 'Your profile fetched successfully');
     } catch (error) {
         return ApiResponse.error(res, error.message);

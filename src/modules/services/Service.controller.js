@@ -1,4 +1,3 @@
-import Service from "./service.model.js"
 import {
     checkExistingService,
     checkExistingServiceItem,
@@ -7,13 +6,11 @@ import {
     deleteServiceOption,
     fetchAllServices,
     updateService,
-    updateServiceItemQuantity,
     updateServiceOption,
-    removeService, fetchServiceById
+    removeService,
+    fetchServiceById,
 } from "./Service.service.js";
 import ApiResponse from "../../core/utils/ApiResponse.js";
-
-
 
 export const addService = async (req, res) => {
     const serviceData = req.body;
@@ -106,26 +103,6 @@ export const deleteServiceItem = async (req, res) => {
             updatedService,
             "Service Item is delete successfully"
         );
-    }catch (e) {
-        return ApiResponse.error(
-            res,
-            e.message
-        );
-    }
-};
-
-export const editServiceItemQuantity = async (req, res) => {
-    const { serviceId, optionId } = req.params;
-    const { quantity } = req.body;
-    try {
-        const updatedService = await updateServiceItemQuantity(serviceId, optionId, +quantity);
-
-        return ApiResponse.success(
-            res,
-            updatedService,
-            "Service Item Quantity is updated successfully"
-        );
-
     }catch (e) {
         return ApiResponse.error(
             res,

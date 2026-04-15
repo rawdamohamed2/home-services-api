@@ -51,12 +51,6 @@ const serviceSchema = new mongoose.Schema({
                 default: 'fixed',
                 required: true
             },
-            quantity: {
-                type: Number,
-                min: 0,
-                default:0,
-                cast: 'quantity is not a valid number'
-            },
             pricePerUnit: {
                 type: Number,
                 min: 0,

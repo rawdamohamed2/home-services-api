@@ -10,8 +10,6 @@ import {
     getMyAssignments,
     getMyBookings,
     getMyReviews,
-    uploadWorkerPhoto,
-    deleteWorkerPhoto
 } from "./worker.controller.js";
 import {protect} from "../../core/middleware/authMiddleware.js";
 import {authorize} from "../../core/middleware/roleMiddleware.js";
@@ -21,7 +19,7 @@ import {
     availabilityWorkerSchema,
     getWorkerByIdSchema, LocationWorkerSchema,
     updateWorkerSchema,
-    uploadWorkerPhotoSchema, workerBookingSchema,
+    workerBookingSchema,
     workerSearchSchema
 } from "../../validation/worker.validation.js";
 
@@ -68,18 +66,6 @@ workerRouter.get('/bookings',
     authorize('worker'),
     validate(workerBookingSchema),
     getMyBookings
-);
-
-workerRouter.post('/profileImage',
-    protect,
-    authorize('worker'),
-    validate(uploadWorkerPhotoSchema),
-    uploadWorkerPhoto
-);
-workerRouter.delete('/profileImage',
-    protect,
-    authorize('worker'),
-    deleteWorkerPhoto
 );
 
 workerRouter.get('/me',

@@ -6,53 +6,78 @@ import Wallet from '../payments/Wallet.model.js';
 import BookingAssignment from '../bookings/BookingAssignment.model.js';
 import Review from '../reviews/Review.model.js';
 import Category from '../categories/Category.model.js';
-import {normalizePhone} from "../../core/utils/normalizePhone.js";
-import {checkExistingUser} from "../auth/auth.service.js";
+import {changeUserPassword, updateUser} from "../users/user.service.js";
+
+export const getUserIdsByName = async (name) => {
+    if (!name) return null;
+    const users = await User.find({
+        $or: [
+            { firstName: { $regex: name, $options: 'i' } },
+            { lastName: { $regex: name, $options: 'i' } }
+        ]
+    }).select('_id');
+    return users.map(u => u._id);
+};
+
+export const getCategoryIdByName = async (categoryName) => {
+    if (!categoryName) return null;
+    const categoryDoc = await Category.findOne({
+        name: { $regex: `^${categoryName}$`, $options: 'i' }
+    });
+    return categoryDoc ? categoryDoc._id : 'NOT_FOUND';
+};
 
 export const fetchAllWorkers = async (filters) => {
+    try {
+        const { page = 1, limit = 10, category, status, name, id } = filters;
+        const skip = (parseInt(page) - 1) * parseInt(limit);
 
-    const { page = 1, limit = 10, category, status } = filters;
-    const query = {};
-    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+        const query = {};
+
+        if (id) query._id = id;
+        if (status) query.approvalStatus = status.trim();
 
 
-    if (status) {
-        query.approvalStatus = status.trim();
-    }
-
-    if (category) {
-        const categoryDoc = await Category.findOne({ name: category });
-
-        if (categoryDoc) {
-            query.categories = categoryDoc._id;
-        } else {
-            return { workers: [], total: 0, page: parseInt(page), limit: parseInt(limit) };
+        if (category) {
+            const categoryId = await getCategoryIdByName(category);
+            if (categoryId === 'NOT_FOUND') {
+                return { workers: [], total: 0, page: parseInt(page), limit: parseInt(limit) };
+            }
+            query.categories = categoryId;
         }
+
+
+        if (name) {
+            const userIds = await getUserIdsByName(name);
+            query.user = { $in: userIds };
+        }
+
+
+        const [workers, total] = await Promise.all([
+            WorkerProfile.find(query)
+                .select('bio experienceYears city approvalStatus ratingAverage availability isAvailable')
+                .populate('user', 'firstName lastName profileImage')
+                .populate({ path: 'categories', select: 'name' })
+                .limit(parseInt(limit))
+                .skip(skip)
+                .sort('-ratingAverage'),
+            WorkerProfile.countDocuments(query)
+        ]);
+
+        return {
+            workers,
+            total,
+            page: parseInt(page),
+            limit: parseInt(limit)
+        };
+    } catch (error) {
+        throw new Error(`Error fetching workers: ${error.message}`);
     }
-
-    const [workers, total] = await Promise.all([
-        WorkerProfile.find(query)
-            .select('bio experienceYears city approvalStatus ratingAverage availability isAvailable')
-            .populate('user', 'firstName lastName profileImage')
-            .populate({ path: 'categories', select: 'name' })
-            .limit(parseInt(limit))
-            .skip(skip)
-            .sort('-ratingAverage'),
-        WorkerProfile.countDocuments(query)
-    ]);
-
-    return {
-        workers,
-        total,
-        page: parseInt(page),
-        limit: parseInt(limit)
-    };
 };
 
 export const fetchWorkerById = async (id) => {
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-        throw new Error('Invalid Worker ID format');
-    }
+
     const workerProfile = await WorkerProfile.findOne({
         $or: [
             { _id: id },
@@ -60,7 +85,7 @@ export const fetchWorkerById = async (id) => {
         ]
     })
         .select('bio experienceYears city approvalStatus ratingAverage availability isAvailable')
-        .populate('user', 'firstName lastName email phone profileImage address isBlocked') // أضفت isBlocked هنا للتأكد
+        .populate('user', 'firstName lastName email phone profileImage address isBlocked')
         .populate('categories', 'name');
 
     if (!workerProfile) {
@@ -79,28 +104,26 @@ export const updateWorkerFullProfile = async (userId, updateBody) => {
     session.startTransaction();
     try {
         const { firstName, email, phone, password, lastName, ...workerData } = updateBody;
-        const user = await User.findById(userId).select('+password').session(session);
 
-        if (!user) throw new Error('User not found');
-
-        const normalizedPhone = normalizePhone(phone);
-
-        if (firstName) user.firstName = firstName;
-        if (lastName) user.lastName = lastName;
-        if (email) {
-            await checkExistingUser(email,"");
-            user.email = email;
-        }
-        if (phone) {
-            await checkExistingUser("", phone);
-            user.phone = normalizedPhone
+        const updatedUser = {
+            firstName,
+            lastName,
+            email,
+            phone,
         }
 
-        if (password && password.trim() !== "") {
-            user.password = password;
-        }
+        await updateUser(userId,updatedUser);
 
-        await user.save({ session });
+        await changeUserPassword(userId, password, password);
+
+        // if (email) {
+        //     await checkExistingUser(email,"");
+        //     user.email = email;
+        // }
+        // if (phone) {
+        //     await checkExistingUser("", phone);
+        //     user.phone = normalizedPhone
+        // }
 
         const updatedWorker = await WorkerProfile.findOneAndUpdate(
             { user: userId },
@@ -121,20 +144,20 @@ export const updateWorkerFullProfile = async (userId, updateBody) => {
         await session.abortTransaction();
         throw error;
     } finally {
-        session.endSession();
+        await session.endSession();
     }
-
 };
 
 export const getFullWorkerProfile = async (userId) => {
     const profile = await WorkerProfile.findOne({ user: userId })
         .populate('user', 'firstName lastName email phone profileImage isVerified')
         .populate('categories', 'name')
-        .select('experienceYears bio approvalStatus');
+        .select('experienceYears city availabilityStatus availability bio approvalStatus createdAt');
 
     if (!profile) throw new Error('Worker profile not found');
 
-    const wallet = await Wallet.findOne({ owner: userId });
+    const wallet = await Wallet.findOne({ owner: userId })
+        .select('balance currency isActive');
 
     return { profile, wallet };
 };
@@ -238,26 +261,6 @@ export const getWorkerReviews = async (userId) => {
         .sort('-createdAt');
 
     return reviews;
-};
-
-export const uploadProfileImage = async (userId, profileImage) => {
-    const user = await User.findById(userId);
-    if (!user) {
-        throw new Error('Worker profile not found');
-    }
-    user.profileImage = profileImage;
-    user.save();
-
-}
-
-export const deleteProfileImage = async (userId) => {
-    const user = await User.findById(userId);
-    if (!user) {
-        throw new Error('Worker profile not found');
-    }
-    user.profileImage = "";
-    user.save();
-
 };
 
 export const updateWorkerAvailability = async (userId,availability) => {

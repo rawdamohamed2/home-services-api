@@ -1,7 +1,7 @@
 import Router from "express";
 import {
     addServiceValidation,
-    baseServiceValidationSchema, searchServicesValidation,
+    searchServicesValidation,
     serviceAddOptionValidation, ServiceIdValidation, serviceItemIdValidation, ServiceItemQuantityValidation,
     serviceUpdateOptionValidation,
     updateServiceValidation
@@ -12,7 +12,9 @@ import {
     addServiceItem, deleteService,
     deleteServiceItem,
     editService,
-    editServiceItem, editServiceItemQuantity, getServiceById, getServices
+    editServiceItem,
+    getServiceById,
+    getServices,
 } from "./Service.controller.js";
 
 
@@ -42,12 +44,6 @@ serviceRouter.delete(
     '/:serviceId/options/:optionId',
     validate(serviceItemIdValidation),
     deleteServiceItem
-);
-
-serviceRouter.patch(
-    '/:serviceId/options/editQuantity/:optionId',
-    validate(ServiceItemQuantityValidation),
-    editServiceItemQuantity
 );
 
 serviceRouter.delete(

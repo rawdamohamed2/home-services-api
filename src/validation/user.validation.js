@@ -1,6 +1,7 @@
 import Joi from 'joi';
 import { phoneRegex, passwordPattern } from '../core/utils/validation.helper.js';
 
+
 export const updateProfileSchema = Joi.object({
     firstName: Joi.string().trim().min(3).max(50).optional()
         .messages({
@@ -14,6 +15,7 @@ export const updateProfileSchema = Joi.object({
             "string.max": "Last name cannot exceed 50 characters",
         }),
 
+
     email: Joi.string().email({ minDomainSegments: 2, tlds: { allow: ['com', 'net'] } }).optional()
         .messages({ "string.email": "Please enter a valid email" }),
 
@@ -24,6 +26,14 @@ export const updateProfileSchema = Joi.object({
         .messages({ "string.max": "Address cannot exceed 200 characters" }),
     enabledLocation: Joi.boolean().optional(),
 
+    email: Joi.string().email({ minDomainSegments: 2, tlds: { allow: ['com', 'net'] } }).optional()
+        .messages({ "string.email": "Please enter a valid email" }),
+    phone: Joi.string().optional().pattern(phoneRegex)
+        .messages({ 'string.pattern.base': 'Please enter a valid phone number' }),
+    address: Joi.string().max(200).optional()
+        .messages({ "string.max": "Address cannot exceed 200 characters" }),
+    enabledLocation: Joi.boolean().optional(),
+  
     location: Joi.object({
         type: Joi.string().valid('Point').default('Point'),
         coordinates: Joi.array()
@@ -43,6 +53,7 @@ export const updateProfileSchema = Joi.object({
 }).unknown(false);
 
 export const changePasswordSchema = Joi.object({
+  
     currentPassword: Joi.string().trim().required().min(6)
         .pattern(passwordPattern)
         .messages({
@@ -83,3 +94,4 @@ export const userIdParamSchema = Joi.object({
             'any.required': 'User ID is required'
         })
 }).unknown(false);
+

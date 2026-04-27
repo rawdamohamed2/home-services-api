@@ -24,5 +24,7 @@ export const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
 export const passwordPattern = new RegExp(`^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[!@#$%^&*()_+={}\\[\\]|\\\\:;"\'<>,.?/~]).{8,64}$`);
 export const validDays = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 
-
+export const objectIdRule = Joi.string()
+    .regex(/^[0-9a-fA-F]{24}$/)
+    .messages({ 'string.pattern.base': 'Invalid ID format' });
 

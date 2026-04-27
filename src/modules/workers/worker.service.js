@@ -18,7 +18,7 @@ export const getUserIdsByName = async (name) => {
             ]
         }).select('_id');
         return users.map(u => u._id);
-    } catch (e) {
+    } catch (error) {
         throw new Error(error.message);
     }
 };
@@ -30,7 +30,7 @@ export const getCategoryIdByName = async (categoryName) => {
             name: { $regex: `^${categoryName}$`, $options: 'i' }
         });
         return categoryDoc ? categoryDoc._id : 'NOT_FOUND';
-    }catch (e) {
+    }catch (error) {
         throw new Error(error.message);
     }
 };
@@ -101,9 +101,9 @@ export const fetchWorkerById = async (id) => {
             throw new Error('No worker profile found.');
         }
 
-        if (workerProfile.user && workerProfile.user.isBlocked) {
-            throw new Error('This worker account is currently suspended.');
-        }
+        // if (workerProfile.user && workerProfile.user.isBlocked) {
+        //     throw new Error('This worker account is currently suspended.');
+        // }
 
         return workerProfile;
 
@@ -128,15 +128,6 @@ export const updateWorkerFullProfile = async (userId, updateBody) => {
         await updateUser(userId,updatedUser);
 
         await changeUserPassword(userId, password, password);
-
-        // if (email) {
-        //     await checkExistingUser(email,"");
-        //     user.email = email;
-        // }
-        // if (phone) {
-        //     await checkExistingUser("", phone);
-        //     user.phone = normalizedPhone
-        // }
 
         const updatedWorker = await WorkerProfile.findOneAndUpdate(
             { user: userId },

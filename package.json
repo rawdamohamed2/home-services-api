@@ -11,7 +11,7 @@
     "node": "20.x"
   },
   "keywords": [],
-  "author": "Rawda",
+  "author": "Rawda and Sara",
   "license": "ISC",
   "description": "",
   "dependencies": {
@@ -36,5 +36,8 @@
     "sib-api-v3-sdk": "^8.5.0",
     "socket.io": "^4.8.3",
     "twilio": "^5.12.2"
+  },
+  "devDependencies": {
+    "prettier": "^3.8.3"
   }
 }

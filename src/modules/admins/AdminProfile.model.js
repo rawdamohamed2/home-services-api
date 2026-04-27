@@ -1,32 +1,12 @@
 import mongoose from 'mongoose';
 
 const adminSchema = new mongoose.Schema({
-    userId: {
+    user: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
-        required: true,
+        required: [true, "Admin profile must belong to a user"],
         unique: true
     },
-    role: {
-        type: String,
-        enum: {
-            values: ["admin", "moderator", "owner"],
-            message: 'Invalid admin role'
-        },
-        required: [true, 'Admin role is required']
-    },
-
-    permissions: [{
-        type: String,
-        enum: [
-            'manage_users',
-            'manage_bookings',
-            'manage_services',
-            'manage_notifications',
-            'manage_ChatAndReviews',
-            'manage_settings'
-        ]
-    }],
 
     managedWorkers: [{
         type: mongoose.Schema.Types.ObjectId,
@@ -57,9 +37,10 @@ const adminSchema = new mongoose.Schema({
     toObject: { virtuals: true }
 });
 
-adminSchema.methods.hasPermission = function(permission) {
-    return this.permissions.includes(permission) || this.role === 'owner';
-};
+adminSchema.methods.hasPermission = function(permission, userRole) {
+    if (userRole === 'owner') return true;
 
+    return this.permissions.includes(permission);
+};
 const Admin = mongoose.models.AdminProfile || mongoose.model('AdminProfile', adminSchema);
 export default Admin;

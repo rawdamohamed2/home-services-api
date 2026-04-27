@@ -6,7 +6,8 @@ const serviceSchema = new mongoose.Schema({
         required: [true, 'Service name is required'],
         trim: true,
         minlength: [3, 'Name too short'],
-        maxlength: [100, 'Name too long']
+        maxlength: [100, 'Name too long'],
+        unique: [true, "Service name is already exists"],
     },
     description: {
         type: String,

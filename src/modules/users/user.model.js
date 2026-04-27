@@ -22,7 +22,7 @@ const userSchema = new mongoose.Schema({
 
     email: {
         type: String,
-        unique: true,
+        unique: [true," email is already exists"],
         sparse: true,
         lowercase: true,
         match: [
@@ -33,7 +33,7 @@ const userSchema = new mongoose.Schema({
 
     phone: {
         type: String,
-        unique: true,
+        unique: [true, "phone is already exists"],
         required: [true, 'Phone number is required'],
         validate: {
             validator: function(v) {
@@ -81,13 +81,28 @@ const userSchema = new mongoose.Schema({
         select: false
     },
 
+    // role: {
+    //     type: String,
+    //     enum: {
+    //         values: ["user", "worker", "admin", "moderator", "owner"],
+    //         message: 'Invalid role'
+    //     },
+    //     default: "user"
+    // },
     role: {
         type: String,
-        enum: {
-            values: ["user", "worker", "admin", "moderator", "owner"],
-            message: 'Invalid role'
-        },
-        default: "user"
+        default: "user",
+        validate: {
+            validator: async function(value) {
+
+                const coreRoles = ['user', 'worker', 'owner', "admin", "moderator"];
+                if (coreRoles.includes(value)) return true;
+
+                const roleExists = await mongoose.model('RolePermission').findOne({ role: value });
+                return !!roleExists;
+            },
+            message: props => `${props.value} is not a valid role.`
+        }
     },
 
     profileImage: {
@@ -207,6 +222,13 @@ userSchema.virtual('adminProfile', {
     ref: 'AdminProfile',
     localField: '_id',
     foreignField: 'userId',
+    justOne: true
+});
+
+userSchema.virtual('roleData', {
+    ref: 'RolePermission',
+    localField: 'role',
+    foreignField: 'role',
     justOne: true
 });
 

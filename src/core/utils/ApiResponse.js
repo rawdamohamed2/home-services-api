@@ -41,13 +41,14 @@ class ApiResponse {
 
         if (error.code === 11000) {
             const field = Object.keys(error.keyPattern)[0];
-            return res.status(409).json({
-                errors: [{
-                    field: field,
-                    message: `${field} already exists`
-                }]
-            });
+            const message = `${field.charAt(0).toUpperCase() + field.slice(1)} is already in use.`;
+
+            return this.error(res, message, 409, [{
+                field: field,
+                message: message
+            }]);
         }
+
 
         return res.status(500).json({
             errors: [{
@@ -96,4 +97,5 @@ class ApiResponse {
         return this.error(res, message, 500);
     }
 }
+
 export default ApiResponse;

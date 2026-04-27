@@ -10,6 +10,7 @@ import categoryRoutes from './modules/categories/category.route.js'
 import mongoose from "mongoose";
 import serviceRoutes from "./modules/services/service.route.js";
 import adminRoutes from "./modules/admins/admin.route.js";
+import roleRoutes from "./modules/rolePermissions/rolePermission.route.js";
 
 const app = express();
 
@@ -27,7 +28,7 @@ app.use('/api/admins', adminRoutes);
 
 app.use('/api/users', userRoutes);
 app.use('/api/categories', categoryRoutes);
-
+app.use("/api/role-permissions",roleRoutes);
 
 app.get('/', (req, res) => {
     res.status(200).json({

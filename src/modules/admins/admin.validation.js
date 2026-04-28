@@ -91,30 +91,28 @@ export const adminEditingSchema = updateProfileSchema
   })
   .unknown(false);
 
-export const adminPasswordSchema = updateProfileSchema
-  .keys({
-    currentPassword: Joi.string()
-      .trim()
-      .min(6)
-      .pattern(passwordPattern)
-      .messages({
-        "string.min": "Password must be at least 6 characters",
-        "string.pattern.base":
-          "Password must be 8 to 64 characters long and include at least one uppercase letter, one lowercase letter, one number, and one special character.",
-      }),
-    newPassword: Joi.string().trim().min(6).pattern(passwordPattern).messages({
+export const adminPasswordSchema = Joi.object({
+  currentPassword: Joi.string()
+    .trim()
+    .min(6)
+    .pattern(passwordPattern)
+    .messages({
       "string.min": "Password must be at least 6 characters",
       "string.pattern.base":
         "Password must be 8 to 64 characters long and include at least one uppercase letter, one lowercase letter, one number, and one special character.",
     }),
-    confirmPassword: Joi.string()
-      .trim()
-      .min(6)
-      .pattern(passwordPattern)
-      .messages({
-        "string.min": "Password must be at least 6 characters",
-        "string.pattern.base":
-          "Password must be 8 to 64 characters long and include at least one uppercase letter, one lowercase letter, one number, and one special character.",
-      }),
-  })
-  .unknown(false);
+  newPassword: Joi.string().trim().min(6).pattern(passwordPattern).messages({
+    "string.min": "Password must be at least 6 characters",
+    "string.pattern.base":
+      "Password must be 8 to 64 characters long and include at least one uppercase letter, one lowercase letter, one number, and one special character.",
+  }),
+  confirmPassword: Joi.string()
+    .trim()
+    .min(6)
+    .pattern(passwordPattern)
+    .messages({
+      "string.min": "Password must be at least 6 characters",
+      "string.pattern.base":
+        "Password must be 8 to 64 characters long and include at least one uppercase letter, one lowercase letter, one number, and one special character.",
+    }),
+}).unknown(false);

@@ -131,7 +131,6 @@ export const changePassword = async (req, res) => {
   const { currentPassword, newPassword, confirmPassword } = req.body;
   const userId = req.user._id;
   try {
-    console.log(userId);
     const newPassMessage = await changeAdminPassword(
       userId,
       currentPassword,

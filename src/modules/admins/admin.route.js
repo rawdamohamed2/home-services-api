@@ -48,7 +48,14 @@ AdminRouter.get(
   validate(adminIdSchema),
   getAdminById,
 );
-
+AdminRouter.patch(
+  "/edit/password",
+  protect,
+  isStaff,
+  checkPermission("manage_settings"),
+  validate(adminPasswordSchema),
+  changePassword,
+);
 AdminRouter.patch(
   "/:id/edit",
   protect,
@@ -56,14 +63,6 @@ AdminRouter.patch(
   checkPermission("manage_settings"),
   validate(adminEditingSchema),
   editAdmin,
-);
-AdminRouter.patch(
-  "/password/edit",
-  protect,
-  isStaff,
-  checkPermission("manage_settings"),
-  validate(adminPasswordSchema),
-  changePassword,
 );
 AdminRouter.delete(
   "/:id/delete",

@@ -21,9 +21,18 @@ export const getUserProfile = async (userId) => {
         .populate('categories', 'name')
         .lean();
 
+    let adminProfile = null;
+    if (user.role === 'admin' || user.role === 'owner' || user.role === 'moderator') {
+        const AdminProfile = mongoose.model('AdminProfile');
+        adminProfile = await AdminProfile.findOne({ userId })
+            .select('role permissions department managedWorkers')
+            .lean();
+    }    
+
     return {
         ...user,
-        workerProfile: workerProfile || null
+        workerProfile: workerProfile || null,
+        adminProfile: adminProfile || null
     };
 };
 

@@ -28,12 +28,12 @@ import { checkPermission } from "../../core/middleware/permissionMiddleware.js";
 
 const workerRouter = Router();
 
-workerRouter.get(
-  "/assignments",
-  protect,
-  authorize("worker"),
-  getMyAssignments,
-);
+// workerRouter.get(
+//   "/assignments",
+//   protect,
+//   authorize("worker"),
+//   getMyAssignments,
+// );
 workerRouter.patch(
   "/update-me",
   protect,
@@ -42,6 +42,7 @@ workerRouter.patch(
   updateWorkerProfile,
 );
 workerRouter.get("/my-reviews", protect, authorize("worker"), getMyReviews);
+
 workerRouter.patch(
   "/location",
   protect,
@@ -64,15 +65,15 @@ workerRouter.patch(
   toggleStatus,
 );
 
-workerRouter.get(
-  "/bookings",
-  protect,
-  authorize("worker"),
-  validate(workerBookingSchema),
-  getMyBookings,
-);
+// workerRouter.get(
+//   "/bookings",
+//   protect,
+//   authorize("worker"),
+//   validate(workerBookingSchema),
+//   getMyBookings,
+// );
 
-workerRouter.get("/me", protect, authorize("worker"), getMe);
+// workerRouter.get("/me", protect, authorize("worker"), getMe);
 workerRouter.get(
   "/:id",
   protect,

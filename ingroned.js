@@ -3,7 +3,7 @@
 // const WorkerProfile = require("./src/models/Accounts/WorkerProfile");
 // const Service = require("./src/models/Services/Service");
 // const bookings = require("./src/models/bookings/bookings");
-// const BookingAssignment = require("./src/models/bookings/BookingAssignment");
+// const bookingAssignment = require("./src/models/bookings/bookingAssignment");
 // const Review = require("./src/models/bookings/Review");
 // const Subscription = require("./src/models/Subscription System/Subscription");
 // const SubscriptionPlan = require("./src/models/Subscription System/SubscriptionPlan");
@@ -59,7 +59,7 @@
 //
 // app.post("/booking-assignment/add", async (req, res) => {
 //     try {
-//         const assignment = await BookingAssignment.create(req.body);
+//         const assignment = await bookingAssignment.create(req.body);
 //         res.json(assignment);
 //     } catch (err) {
 //         res.status(500).json({ error: err.message });

@@ -31,6 +31,7 @@
     "mongoose": "8.2.1",
     "morgan": "^1.10.1",
     "multer": "^2.1.1",
+    "node-cron": "^4.2.1",
     "nodemailer": "^8.0.1",
     "nodemon": "^3.1.14",
     "sib-api-v3-sdk": "^8.5.0",

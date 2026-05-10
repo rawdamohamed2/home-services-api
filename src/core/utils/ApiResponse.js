@@ -1,101 +1,122 @@
 class ApiResponse {
-    // Success response
-    static success(res, data = null, message = 'Success', statusCode = 200) {
-        return res.status(statusCode).json({
-            success: true,
-            statusCode,
-            message,
-            data,
-            timestamp: new Date().toISOString()
+  static success(res, data = null, message = "Success", statusCode = 200) {
+    return res.status(statusCode).json({
+      success: true,
+      statusCode,
+      message,
+      data,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  static sendPaginated = (
+    res,
+    data,
+    total,
+    page,
+    limit,
+    message = "Success",
+  ) => {
+    return res.status(200).json({
+      success: true,
+      message,
+      data,
+      pagination: {
+        total,
+        page: Number(page),
+        limit: Number(limit),
+        pages: Math.ceil(total / limit),
+      },
+    });
+  };
+
+  static error(res, message = "Error", statusCode = 400, errors = null) {
+    const response = {
+      success: false,
+      statusCode,
+      message,
+      timestamp: new Date().toISOString(),
+    };
+
+    if (errors) response.errors = errors;
+
+    return res.status(statusCode).json(response);
+  }
+
+  static handleMongooseError(res, error) {
+    if (error.name === "ValidationError") {
+      const errors = [];
+
+      for (let field in error.errors) {
+        errors.push({
+          field: field,
+          message: error.errors[field].message,
         });
+      }
+
+      return res.status(400).json({ errors });
     }
 
-    // Error response
-    static error(res, message = 'Error', statusCode = 400, errors = null) {
-        const response = {
-            success: false,
-            statusCode,
-            message,
-            timestamp: new Date().toISOString()
-        };
+    if (error.code === 11000) {
+      const field = Object.keys(error.keyPattern)[0];
+      const message = `${field.charAt(0).toUpperCase() + field.slice(1)} is already in use.`;
 
-        if (errors) response.errors = errors;
-
-        return res.status(statusCode).json(response);
+      return this.error(res, message, 409, [
+        {
+          field: field,
+          message: message,
+        },
+      ]);
     }
 
-    static handleMongooseError(res, error) {
+    return res.status(500).json({
+      errors: [
+        {
+          field: "server",
+          message: error.message || "Internal server error",
+        },
+      ],
+    });
+  }
 
-        if (error.name === 'ValidationError') {
-            const errors = [];
+  static validationError(res, errors = []) {
+    return res.status(400).json({
+      success: false,
+      statusCode: 400,
+      errors: errors,
+      timestamp: new Date().toISOString(),
+    });
+  }
 
-            for (let field in error.errors) {
-                errors.push({
-                    field: field,
-                    message: error.errors[field].message
-                });
-            }
+  // 400 Bad Request
+  static badRequest(res, message = "Bad request", errors = null) {
+    return this.error(res, message, 400, errors);
+  }
 
-            return res.status(400).json({ errors });
-        }
+  // 401 Unauthorized
+  static unauthorized(res, message = "Unauthorized") {
+    return this.error(res, message, 401);
+  }
 
-        if (error.code === 11000) {
-            const field = Object.keys(error.keyPattern)[0];
-            const message = `${field.charAt(0).toUpperCase() + field.slice(1)} is already in use.`;
+  // 403 Forbidden
+  static forbidden(res, message = "Forbidden") {
+    return this.error(res, message, 403);
+  }
 
-            return this.error(res, message, 409, [{
-                field: field,
-                message: message
-            }]);
-        }
+  // 404 Not Found
+  static notFound(res, message = "Resource not found") {
+    return this.error(res, message, 404);
+  }
 
+  // 409 Conflict
+  static conflict(res, message = "Conflict") {
+    return this.error(res, message, 409);
+  }
 
-        return res.status(500).json({
-            errors: [{
-                field: 'server',
-                message: error.message || 'Internal server error'
-            }]
-        });
-    }
-
-    static validationError(res, errors = []) {
-        return res.status(400).json({
-            success: false,
-            statusCode:400,
-            errors: errors,
-            timestamp: new Date().toISOString()
-        });
-    }
-
-    // 400 Bad Request
-    static badRequest(res, message = 'Bad request', errors = null) {
-        return this.error(res, message, 400, errors);
-    }
-
-    // 401 Unauthorized
-    static unauthorized(res, message = 'Unauthorized') {
-        return this.error(res, message, 401);
-    }
-
-    // 403 Forbidden
-    static forbidden(res, message = 'Forbidden') {
-        return this.error(res, message, 403);
-    }
-
-    // 404 Not Found
-    static notFound(res, message = 'Resource not found') {
-        return this.error(res, message, 404);
-    }
-
-    // 409 Conflict
-    static conflict(res, message = 'Conflict') {
-        return this.error(res, message, 409);
-    }
-
-    // 500 Internal Server Error
-    static serverError(res, message = 'Internal server error') {
-        return this.error(res, message, 500);
-    }
+  // 500 Internal Server Error
+  static serverError(res, message = "Internal server error") {
+    return this.error(res, message, 500);
+  }
 }
 
 export default ApiResponse;

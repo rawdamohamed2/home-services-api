@@ -9,7 +9,6 @@ export const dispatchBooking = async (bookingId) => {
     "service",
     "name category",
   );
-
   if (!booking) throw new AppError("Booking not found", 404);
   if (booking.status !== "pending")
     throw new AppError("Only pending bookings can be dispatched", 400);

@@ -128,19 +128,27 @@ const userSchema = new mongoose.Schema(
       type: {
         type: String,
         enum: ["Point"],
-        default: "Point",
+        // شيلنا الـ default: "Point" عشان ميعملش Object فاضي
+        required: function () {
+          return this.enabledLocation === true;
+        },
       },
       coordinates: {
         type: [Number],
-        required: [true, "Location coordinates are required"],
+        // مطلوب فقط لو المستخدم فعل اللوكيشن
+        required: function () {
+          return this.enabledLocation === true;
+        },
         validate: {
           validator: function (value) {
+            // لو الحقل اختياري ومبعتش داتا، نعدي الـ validation
+            if (!value || value.length === 0) return !this.enabledLocation;
             return (
               value.length === 2 &&
               value[0] >= -180 &&
-              value[0] <= 180 &&
+              value[0] <= 180 && // Longitude
               value[1] >= -90 &&
-              value[1] <= 90
+              value[1] <= 90 // Latitude
             );
           },
           message: "Invalid coordinates: [longitude, latitude]",

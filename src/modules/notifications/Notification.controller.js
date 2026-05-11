@@ -6,12 +6,13 @@ import { NotFoundError } from "../../core/utils/Errors.js";
 // GET /api/notifications
 export const getNotifications = async (req, res) => {
   try {
-    const result = await Notification.getUserNotifications(req.user.id, {
-      page: Number(req.query.page) || 1,
-      limit: Number(req.query.limit) || 20,
-      isRead:
-        req.query.isRead !== undefined ? req.query.isRead === "true" : null,
-      type: req.query.type || null,
+    const userId = req.user.id;
+    const { page, limit, isRead, type } = req.query;
+    const result = await Notification.getUserNotifications(userId, {
+      page: Number(page) || 1,
+      limit: Number(limit) || 20,
+      isRead: isRead !== undefined ? isRead === false : null,
+      type: type || null,
     });
 
     ApiResponse.sendPaginated(

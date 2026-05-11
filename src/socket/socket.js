@@ -12,7 +12,10 @@ export const initSocket = (httpServer) => {
   });
 
   io.use((socket, next) => {
-    const token = socket.handshake.auth?.token;
+    const token =
+      socket.handshake.auth?.token ||
+      socket.handshake.headers?.token ||
+      socket.handshake.query?.token;
     if (!token) return next(new Error("No token provided"));
 
     try {
@@ -49,6 +52,7 @@ export const getIO = () => {
 export const emitToUser = (userId, event, data) => {
   try {
     getIO().to(`user:${userId.toString()}`).emit(event, data);
+    console.log(`Sending event ${event} to user ${userId} ,hgfghgfh ${data}`);
   } catch (err) {
     console.warn(`[Socket] Could not emit to user ${userId}:`, err.message);
   }

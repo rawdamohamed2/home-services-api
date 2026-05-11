@@ -53,16 +53,25 @@ export const acceptOffer = async (assignment) => {
 
     const booking = await Booking.findById(assignment.booking)
       .populate("service", "name category")
-      .populate("user", "firstName lastName phone");
+      .populate("user", "firstName lastName phone")
+      .populate({
+        path: "worker",
+        select:
+          "nationalIdFront nationalIdBack licenseImage availabilityStatus bio categories",
+        populate: {
+          path: "user",
+          select: "firstName lastName phone profileImage email",
+        },
+      });
 
     await notifyBookingAccepted(booking.user._id, {
-      workerName: `${booking.user.firstName} ${booking.user.lastName}`,
+      workerName: `${booking.worker.user.firstName} ${booking.worker.user.lastName}`,
       serviceName: booking.service?.name,
     });
 
     await notifyWorkerAssigned(assignment.worker, {
       serviceName: booking.service?.name,
-      scheduledDate: booking.scheduledDate?.toLocaleDateString("ar-EG"),
+      scheduledDate: booking.scheduledDate,
     });
     return { assignment, booking };
   } catch (err) {

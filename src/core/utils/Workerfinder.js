@@ -54,7 +54,7 @@ const _baseQuery = (coordinates, maxDistance, limit) => {
   return User.find({
     role: "worker",
     isBlocked: false,
-    //isVerified: true,
+    isVerified: true,
     enabledLocation: true,
     location: {
       $near: {
@@ -133,7 +133,7 @@ export const findNearbyWorkersByCategory = async ({
       // Step 2: filter by category + approvalStatus
       const workers = await WorkerProfile.find({
         user: { $in: nearbyUserIds },
-        //approvalStatus: "approved",
+        approvalStatus: "approved",
         ...(categoryId && { categories: categoryId }),
       })
         .select("_id user")
@@ -145,8 +145,8 @@ export const findNearbyWorkersByCategory = async ({
           `Found ${workers.length} workers in category within ${radius / 1000}km`,
         );
         return workers.map((w) => ({
-          workerId: w._id, // Worker._id → لـ BookingAssignment.worker
-          workerUserId: w.user, // User._id   → لـ notifications
+          workerId: w._id,
+          workerUserId: w.user,
         }));
       }
     }

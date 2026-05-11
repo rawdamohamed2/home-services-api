@@ -77,7 +77,7 @@ export const sendNotification = async (userId, type, data = {}) => {
     console.warn(`[Notification] Unknown type: ${type}`);
     return null;
   }
-
+  console.log(userId);
   // 1. Save to DB
   const notification = await Notification.create({
     user: userId,
@@ -96,7 +96,6 @@ export const sendNotification = async (userId, type, data = {}) => {
       type: notification.type,
       createdAt: notification.createdAt,
     },
-    // Extra data for UI to act on immediately
     ...data,
   });
 

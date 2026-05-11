@@ -69,9 +69,9 @@ notificationSchema.virtual("timeAgo").get(function () {
   const hours = Math.floor(minutes / 60);
   const days = Math.floor(hours / 24);
 
-  if (days > 0) return `${days} يوم`;
-  if (hours > 0) return `${hours} ساعة`;
-  if (minutes > 0) return `${minutes} دقيقة`;
+  if (days > 0) return `${days}  Days`;
+  if (hours > 0) return `${hours} Hours`;
+  if (minutes > 0) return `${minutes} minutes`;
   return "الآن";
 });
 
@@ -108,17 +108,11 @@ notificationSchema.statics.getUserNotifications = async function (
   userId,
   options = {},
 ) {
-  const {
-    page = 1,
-    limit = 20,
-    isRead = null,
-    type = null,
-    includeDeleted = false,
-  } = options;
+  const { page = 1, limit = 20, isRead = false, type = null } = options;
+  console.log(page, limit, isRead, type);
 
   const query = {};
   query.user = userId;
-  if (!includeDeleted) query.isDeleted = false;
   if (isRead !== null) query.isRead = isRead;
   if (type) query.type = type;
   console.log(userId);
@@ -127,9 +121,9 @@ notificationSchema.statics.getUserNotifications = async function (
   const [notifications, total, unreadCount] = await Promise.all([
     this.find(query).sort("-createdAt").skip(skip).limit(limit).lean(),
     this.countDocuments(query),
-    this.countDocuments({ user: userId, isRead: false, isDeleted: false }),
+    this.countDocuments({ user: userId, isRead: false }),
   ]);
-  console.log(notifications);
+
   return {
     notifications,
     pagination: {

@@ -8,8 +8,12 @@ import BookingAssignment from "../bookingAssignment/BookingAssignment.model.js";
 import mongoose from "mongoose";
 import { dispatchBooking } from "../../core/utils/Dispatchservice.js";
 import { getUserProfile } from "../users/user.service.js";
-import { notifyBookingCancelled } from "../notifications/Notification.service.js";
+import {
+  notifyBookingCancelled,
+  notifyBookingCreated,
+} from "../notifications/Notification.service.js";
 import req from "express/lib/request.js";
+import { fetchServiceById } from "../services/Service.service.js";
 
 export const orderService = async (
   service,
@@ -38,6 +42,10 @@ export const orderService = async (
       dispatched: false,
       reason: err.message,
     }));
+
+    const Service = await fetchServiceById(service);
+
+    await notifyBookingCreated(userId, { serviceName: Service.name });
 
     return { booking, dispatch };
   } catch (err) {
@@ -76,7 +84,6 @@ export const fetchBookings = async (
       }
     }
     if (status) filter.status = status;
-    console.log(filter);
     const skip = (Number(page) - 1) * Number(limit);
 
     const [bookings, total] = await Promise.all([

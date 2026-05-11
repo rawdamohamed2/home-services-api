@@ -52,21 +52,21 @@ export const baseRegisterSchema = Joi.object({
 
 export const userRegisterSchema = baseRegisterSchema
   .keys({
-    role: Joi.string().valid("user").default("user").optional().messages({
-      "any.only": "The role Must be user",
-    }),
+    // role: Joi.string().valid("user").default("user").optional().messages({
+    //   "any.only": "The role Must be user",
+    // }),
 
-    enabledLocation: {
-      type: Boolean,
-      default: false,
-    },
+    enabledLocation: Joi.boolean().default(false),
 
     location: Joi.when("enabledLocation", {
       is: true,
       then: Joi.object({
-        type: Joi.string().valid("Point").required().default("Point"),
+        type: Joi.string().valid("Point").default("Point").required(),
         coordinates: Joi.array()
-          .items(Joi.number().min(-180).max(180), Joi.number().min(-90).max(90))
+          .items(
+            Joi.number().min(-180).max(180), // Longitude
+            Joi.number().min(-90).max(90), // Latitude
+          )
           .length(2)
           .required(),
         address: Joi.object({
@@ -74,8 +74,13 @@ export const userRegisterSchema = baseRegisterSchema
           city: Joi.string().required(),
           details: Joi.string().allow("", null),
         }).required(),
-      }).required(),
-      otherwise: Joi.forbidden(),
+      })
+        .required()
+        .messages({
+          "any.required":
+            "Location details are required when location is enabled",
+        }),
+      otherwise: Joi.optional().allow(null, {}), // أو Joi.forbidden() لو عاوزه تمنعي إرساله تماماً
     }),
   })
   .unknown(false);

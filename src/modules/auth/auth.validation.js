@@ -48,28 +48,39 @@ export const baseRegisterSchema = Joi.object({
     .default(
       "https://res.cloudinary.com/dlbgzpo7s/image/upload/v1773087860/user-profile-icon-vector-avatar-600nw-2558760599_czvcso.webp",
     ),
-
-  enabledLocation: Joi.boolean().default(false),
-
-  location: Joi.when("enabledLocation", {
-    is: true,
-    then: Joi.object({
-      type: Joi.string().valid("Point").required(),
-      coordinates: Joi.array()
-        .items(Joi.number().min(-180).max(180), Joi.number().min(-90).max(90))
-        .length(2)
-        .required(),
-    }).required(),
-    otherwise: Joi.forbidden(),
-  }),
-
-  address: Joi.string().optional(),
 }).unknown(false);
 
 export const userRegisterSchema = baseRegisterSchema
   .keys({
-    role: Joi.string().valid("user").default("user").optional().messages({
-      "any.only": "The role Must be user",
+    // role: Joi.string().valid("user").default("user").optional().messages({
+    //   "any.only": "The role Must be user",
+    // }),
+
+    enabledLocation: Joi.boolean().default(false),
+
+    location: Joi.when("enabledLocation", {
+      is: true,
+      then: Joi.object({
+        type: Joi.string().valid("Point").default("Point").required(),
+        coordinates: Joi.array()
+          .items(
+            Joi.number().min(-180).max(180), // Longitude
+            Joi.number().min(-90).max(90), // Latitude
+          )
+          .length(2)
+          .required(),
+        address: Joi.object({
+          street: Joi.string().required(),
+          city: Joi.string().required(),
+          details: Joi.string().allow("", null),
+        }).required(),
+      })
+        .required()
+        .messages({
+          "any.required":
+            "Location details are required when location is enabled",
+        }),
+      otherwise: Joi.optional().allow(null, {}), // أو Joi.forbidden() لو عاوزه تمنعي إرساله تماماً
     }),
   })
   .unknown(false);
@@ -95,6 +106,24 @@ export const workerRegisterSchema = baseRegisterSchema
     }),
     city: Joi.string().required().messages({
       "any.required": "The city is required",
+    }),
+    enabledLocation: Joi.boolean().default(true).required(),
+
+    location: Joi.when("enabledLocation", {
+      is: true,
+      then: Joi.object({
+        type: Joi.string().valid("Point").required().default("Point"),
+        coordinates: Joi.array()
+          .items(Joi.number().min(-180).max(180), Joi.number().min(-90).max(90))
+          .length(2)
+          .required(),
+        address: Joi.object({
+          street: Joi.string().required(),
+          city: Joi.string().required(),
+          details: Joi.string().allow("", null), // Optional details
+        }).required(),
+      }).required(),
+      otherwise: Joi.forbidden(),
     }),
 
     nationalIdFront: Joi.string().uri().required().messages({

@@ -25,11 +25,9 @@ export const addAdmin = async (req, res) => {
       phone,
       role: role || "admin",
     };
-
     await checkExistingUser(email, phone);
 
     const user = await createBaseAccount(userData, role || "admin");
-
     const admin = await createAdmin(adminData, user._id);
 
     await sendEmail(

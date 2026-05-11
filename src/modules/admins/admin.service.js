@@ -48,7 +48,6 @@ export const getUserId = async (adminId) => {
 
 export const createAdmin = async (adminData, userId) => {
   try {
-    console.log(userId);
     const admin = new Admin({
       user: userId,
       ...adminData,

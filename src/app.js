@@ -1,41 +1,56 @@
 import dotenv from "dotenv";
 dotenv.config();
 import express from "express";
-import connectDB from "./core/config/db.js";
-import './modules/categories/Category.model.js';
-import authRoutes from './modules/auth/auth.route.js';
-import workerRoutes from './modules/workers/worker.route.js';
-import userRoutes from './modules/users/user.route.js';
-import categoryRoutes from './modules/categories/category.route.js'
 import mongoose from "mongoose";
+import cors from "cors";
+import helmet from "helmet";
+import morgan from "morgan";
+import { createServer } from "http";
+import connectDB from "./core/config/db.js";
+import "./modules/categories/Category.model.js";
+import authRoutes from "./modules/auth/auth.route.js";
+import workerRoutes from "./modules/workers/worker.route.js";
+import userRoutes from "./modules/users/user.route.js";
+import categoryRoutes from "./modules/categories/category.route.js";
 import serviceRoutes from "./modules/services/service.route.js";
 import adminRoutes from "./modules/admins/admin.route.js";
 import roleRoutes from "./modules/rolePermissions/rolePermission.route.js";
+import bookingRoutes from "./modules/bookings/booking.route.js";
+import notificationsRoutes from "./modules/notifications/Notification.routes.js";
+import assignmentsRoutes from "./modules/bookingAssignment/bookingAssignment.route.js";
 
 const app = express();
-
+const httpServer = createServer(app);
 
 connectDB();
 
 app.use(express.json());
+app.use(helmet());
+app.use(cors());
+app.use(express.urlencoded({ extended: true }));
 
-console.log('📊 Registered models:', mongoose.modelNames());
-app.use('/api/auth', authRoutes);
-app.use('/api/workers', workerRoutes);
+if (process.env.NODE_ENV === "development") {
+  app.use(morgan("dev"));
+}
 
-app.use('/api/services', serviceRoutes);
-app.use('/api/admins', adminRoutes);
+console.log("📊 Registered models:", mongoose.modelNames());
+app.use("/api/auth", authRoutes);
+app.use("/api/workers", workerRoutes);
+app.use("/api/assignments", assignmentsRoutes);
+app.use("/api/bookings", bookingRoutes);
+app.use("/api/services", serviceRoutes);
+app.use("/api/notifications", notificationsRoutes);
+app.use("/api/admins", adminRoutes);
+app.use("/api/users", userRoutes);
+app.use("/api/categories", categoryRoutes);
+app.use("/api/role-permissions", roleRoutes);
 
-app.use('/api/users', userRoutes);
-app.use('/api/categories', categoryRoutes);
-app.use("/api/role-permissions",roleRoutes);
-
-app.get('/', (req, res) => {
-    res.status(200).json({
-        message: 'Welcome to serviGo Api',
-        status: 'success'
-    });
+app.get("/", (req, res) => {
+  res.status(200).json({
+    message: "Welcome to serviGo Api",
+    status: "success",
+  });
 });
 
+export { httpServer };
 export default app;
-

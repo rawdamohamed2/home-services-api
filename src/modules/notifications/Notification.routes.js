@@ -7,7 +7,7 @@ import {
   markAllAsRead,
   deleteNotification,
   deleteAllNotifications,
-} from "./notification.controller.js";
+} from "./Notification.controller.js";
 
 const notificationsRouter = Router();
 notificationsRouter.use(protect);

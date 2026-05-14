@@ -62,7 +62,7 @@ export const editBooking = async (req, res) => {
     const userId = req.user.id;
     const { scheduledDate, duration, notes, location, selectedOptions } =
       req.body;
-    const bookings = await updateBooking(
+    const { newBooking, dispatch } = await updateBooking(
       userId,
       id,
       scheduledDate,
@@ -71,7 +71,12 @@ export const editBooking = async (req, res) => {
       location,
       selectedOptions,
     );
-    ApiResponse.success(res, bookings, "Booking updated successfully");
+    console.log(newBooking);
+    ApiResponse.success(
+      res,
+      { newBooking, dispatch },
+      "Booking updated successfully",
+    );
   } catch (err) {
     errorHandler(err, req, res);
   }

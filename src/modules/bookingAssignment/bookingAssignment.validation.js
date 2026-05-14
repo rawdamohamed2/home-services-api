@@ -1,7 +1,5 @@
 import Joi from "joi";
 import { objectIdRule } from "../../core/utils/validation.helper.js";
-import { IdBookingValidation } from "../bookings/booking.validation.js";
-import { counterOffer } from "./bookingAssignment.service.js";
 
 export const filterAssignmentValidation = Joi.object({
   page: Joi.number().integer().min(1).default(1),

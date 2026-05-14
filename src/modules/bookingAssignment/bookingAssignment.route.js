@@ -28,7 +28,6 @@ import {
 const assignmentsRouter = Router();
 assignmentsRouter.use(protect);
 
-// ── Worker ────────────────────────────────────────────────────────────────────
 assignmentsRouter.get(
   "/my",
   validate(filterAssignmentValidation),
@@ -60,7 +59,6 @@ assignmentsRouter.patch(
   counterAssignment,
 );
 
-// ── User (respond to counter offer) ──────────────────────────────────────────
 assignmentsRouter.patch(
   "/:id/user-accept",
   checkPermissionAndRole("user", "manage_bookings"),
@@ -74,7 +72,6 @@ assignmentsRouter.patch(
   userRejectCounter,
 );
 
-// ── View ──────────────────────────────────────────────────────────────────────
 assignmentsRouter.get(
   "/booking/:bookingId",
   checkPermissionAndRole("user", "manage_bookings"),
@@ -82,7 +79,6 @@ assignmentsRouter.get(
   getBookingAssignments,
 );
 
-// ── Admin ─────────────────────────────────────────────────────────────────────
 assignmentsRouter.post(
   "/expire",
   checkPermission("manage_bookings"),

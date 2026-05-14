@@ -185,7 +185,7 @@ bookingAssignmentSchema.methods.userAccept = async function () {
   await Booking.findByIdAndUpdate(this.booking, {
     worker: this.worker,
     status: "accepted",
-    price: this.finalPrice,
+    totalAmount: this.finalPrice,
   });
 
   return this;

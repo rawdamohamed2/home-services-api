@@ -14,11 +14,16 @@ const notificationSchema = new mongoose.Schema(
       trim: true,
       maxlength: [100, "Title too long"],
     },
-    body: {
+    message: {
       type: String,
-      required: [true, "Body is required"],
+      required: [true, "Message is required"],
       trim: true,
-      maxlength: [500, "Body too long"],
+      maxlength: [500, "Message too long"],
+    },
+    metadata: {
+      type: Map,
+      of: mongoose.Schema.Types.Mixed,
+      default: {},
     },
     type: {
       type: String,
@@ -27,6 +32,11 @@ const notificationSchema = new mongoose.Schema(
           "booking_created",
           "booking_accepted",
           "booking_completed",
+          "booking_offer_updated",
+          "counter_offer_received",
+          "new_booking_offer",
+          "counter_offer_accepted",
+          "counter_offer_rejected",
           "booking_cancelled",
           "payment_received",
           "payment_released",
@@ -60,7 +70,7 @@ notificationSchema.index({ isRead: 1, createdAt: -1 });
 notificationSchema.index(
   { createdAt: 1 },
   { expireAfterSeconds: 60 * 60 * 24 * 30 },
-); // Auto-delete after 30 days
+);
 
 // Virtual للتنسيق
 notificationSchema.virtual("timeAgo").get(function () {

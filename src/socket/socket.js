@@ -52,7 +52,7 @@ export const getIO = () => {
 export const emitToUser = (userId, event, data) => {
   try {
     getIO().to(`user:${userId.toString()}`).emit(event, data);
-    console.log(`Sending event ${event} to user ${userId} ,hgfghgfh ${data}`);
+    console.log(`Sending event ${event} to user ${userId}, data ${data}`);
   } catch (err) {
     console.warn(`[Socket] Could not emit to user ${userId}:`, err.message);
   }

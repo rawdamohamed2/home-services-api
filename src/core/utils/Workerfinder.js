@@ -54,7 +54,7 @@ const _baseQuery = (coordinates, maxDistance, limit) => {
   return User.find({
     role: "worker",
     isBlocked: false,
-    isVerified: true,
+    //isVerified: true,
     enabledLocation: true,
     location: {
       $near: {
@@ -133,7 +133,7 @@ export const findNearbyWorkersByCategory = async ({
       // Step 2: filter by category + approvalStatus
       const workers = await WorkerProfile.find({
         user: { $in: nearbyUserIds },
-        approvalStatus: "approved",
+        //approvalStatus: "approved",
         ...(categoryId && { categories: categoryId }),
       })
         .select("_id user")

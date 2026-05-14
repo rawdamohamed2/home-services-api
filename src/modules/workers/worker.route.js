@@ -4,12 +4,11 @@ import {
   getWorkerById,
   updateWorkerProfile,
   updateAvailability,
-  getMe,
   updateLocation,
   toggleStatus,
   getMyAssignments,
-  getMyBookings,
   getMyReviews,
+  completeBooking,
   deleteMe,
 } from "./worker.controller.js";
 import { protect } from "../../core/middleware/authMiddleware.js";
@@ -22,32 +21,33 @@ import {
   LocationWorkerSchema,
   updateWorkerSchema,
   workerBookingSchema,
+  workerCompletedSchema,
   workerSearchSchema,
 } from "./worker.validation.js";
 import { checkPermission } from "../../core/middleware/permissionMiddleware.js";
 
 const workerRouter = Router();
 
-// workerRouter.get(
-//   "/assignments",
-//   protect,
-//   authorize("worker"),
-//   getMyAssignments,
-// );
-workerRouter.patch(
-  "/update-me",
+workerRouter.get(
+  "/assignments",
   protect,
   authorize("worker"),
+  getMyAssignments,
+);
+workerRouter.patch(
+  "/update-me",
   validate(updateWorkerSchema),
+  protect,
+  authorize("worker"),
   updateWorkerProfile,
 );
 workerRouter.get("/my-reviews", protect, authorize("worker"), getMyReviews);
 
 workerRouter.patch(
   "/location",
+  validate(LocationWorkerSchema),
   protect,
   authorize("worker"),
-  validate(LocationWorkerSchema),
   updateLocation,
 );
 workerRouter.patch(
@@ -59,9 +59,9 @@ workerRouter.patch(
 );
 workerRouter.patch(
   "/status",
+  validate(availabilityStatusSchema),
   protect,
   authorize("worker"),
-  validate(availabilityStatusSchema),
   toggleStatus,
 );
 
@@ -76,20 +76,27 @@ workerRouter.patch(
 // workerRouter.get("/me", protect, authorize("worker"), getMe);
 workerRouter.get(
   "/:id",
+  validate(getWorkerByIdSchema),
   protect,
   isStaff,
   checkPermission("manage_users"),
-  validate(getWorkerByIdSchema),
   getWorkerById,
 );
 
 workerRouter.get(
   "/",
+  validate(workerSearchSchema),
   protect,
   isStaff,
   checkPermission("manage_users"),
-  validate(workerSearchSchema),
   getAllWorkers,
+);
+workerRouter.patch(
+  "/:id/complete",
+  validate(workerCompletedSchema),
+  protect,
+  authorize("worker"),
+  completeBooking,
 );
 
 workerRouter.delete("/me", protect, authorize("worker"), deleteMe);

@@ -3,7 +3,6 @@ import ApiResponse from "../../core/utils/ApiResponse.js";
 import errorHandler from "../../core/middleware/Errorhandler.js";
 import { NotFoundError } from "../../core/utils/Errors.js";
 
-// GET /api/notifications
 export const getNotifications = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -28,7 +27,24 @@ export const getNotifications = async (req, res) => {
   }
 };
 
-// GET /api/notifications/unread-count
+export const getNotification = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { id } = req.params;
+    const result = await Notification.findOne({ _id: id, user: userId });
+    if (!result) {
+      throw new NotFoundError("Notification not found or access denied");
+    }
+    if (!result.isRead) {
+      result.isRead = true;
+      await result.save();
+    }
+    ApiResponse.success(res, result, "Notification retrieved successfully");
+  } catch (err) {
+    errorHandler(err, req, res);
+  }
+};
+
 export const getUnreadCount = async (req, res) => {
   try {
     const count = await Notification.countDocuments({
@@ -41,7 +57,6 @@ export const getUnreadCount = async (req, res) => {
   }
 };
 
-// PATCH /api/notifications/:id/read
 export const markAsRead = async (req, res) => {
   try {
     const notification = await Notification.findOne({
@@ -57,7 +72,6 @@ export const markAsRead = async (req, res) => {
   }
 };
 
-// PATCH /api/notifications/read-all
 export const markAllAsRead = async (req, res) => {
   try {
     const result = await Notification.markAllAsRead(req.user.id);
@@ -71,7 +85,6 @@ export const markAllAsRead = async (req, res) => {
   }
 };
 
-// DELETE /api/notifications/:id
 export const deleteNotification = async (req, res) => {
   try {
     const notification = await Notification.findOneAndDelete({
@@ -86,7 +99,6 @@ export const deleteNotification = async (req, res) => {
   }
 };
 
-// DELETE /api/notifications (delete all for user)
 export const deleteAllNotifications = async (req, res) => {
   try {
     const result = await Notification.deleteMany({ user: req.user.id });

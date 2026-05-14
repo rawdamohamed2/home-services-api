@@ -5,7 +5,7 @@ export const EVENTS = {
   USER_ACCEPTED: "offer:user_accepted", // user accepted counter price
   USER_REJECTED: "offer:user_rejected", // user rejected counter price
   BOOKING_CANCELLED: "booking:cancelled", // booking was cancelled
-
+  BOOKING_UPDATED: "booking:updated",
   // ── Server → User ─────────────────────────────────────────────────
   COUNTER_OFFER: "offer:counter", // worker proposed new price
   BOOKING_ACCEPTED: "booking:accepted", // worker accepted at original price

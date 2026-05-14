@@ -6,6 +6,7 @@ import {
   passwordPattern,
   objectIdRule,
 } from "../../core/utils/validation.helper.js";
+import { markBookingComplete } from "./worker.service.js";
 
 export const workerSearchSchema = Joi.object({
   page: Joi.number().integer().min(1).default(1),
@@ -120,4 +121,8 @@ export const availabilityStatusSchema = Joi.object({
 
 export const workerBookingSchema = Joi.object({
   status: Joi.string().valid("accepted", "in-progress", "completed").optional(),
+}).unknown(false);
+
+export const workerCompletedSchema = Joi.object({
+  id: objectIdRule.required(),
 }).unknown(false);

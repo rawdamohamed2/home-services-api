@@ -1,9 +1,5 @@
 import Booking from "./Booking.model.js";
-import {
-  ForbiddenError,
-  NotFoundError,
-  ValidationError,
-} from "../../core/utils/Errors.js";
+import { NotFoundError, ValidationError } from "../../core/utils/Errors.js";
 import BookingAssignment from "../bookingAssignment/BookingAssignment.model.js";
 import mongoose from "mongoose";
 import { dispatchBooking } from "../../core/utils/Dispatchservice.js";
@@ -11,8 +7,8 @@ import { getUserProfile } from "../users/user.service.js";
 import {
   notifyBookingCancelled,
   notifyBookingCreated,
+  notifyBookingUpdated,
 } from "../notifications/Notification.service.js";
-import req from "express/lib/request.js";
 import { fetchServiceById } from "../services/Service.service.js";
 
 export const orderService = async (
@@ -44,9 +40,20 @@ export const orderService = async (
     }));
 
     const Service = await fetchServiceById(service);
+    const user = await getUserProfile(userId);
 
-    await notifyBookingCreated(userId, { serviceName: Service.name });
-
+    await notifyBookingCreated(
+      userId,
+      {
+        booking_id: booking._id,
+        serviceName: Service.name,
+        fair: booking.totalAmount,
+        customer_name: `${user.firstName} ${user.lastName}`,
+      },
+      {
+        serviceName: Service.name,
+      },
+    );
     return { booking, dispatch };
   } catch (err) {
     throw err;
@@ -89,7 +96,7 @@ export const fetchBookings = async (
     const [bookings, total] = await Promise.all([
       Booking.find(filter)
         .populate("service", "name category")
-        .populate("user", "name phone profileImage email")
+        .populate("user", "firstName lastName phone profileImage email")
         .populate({
           path: "worker",
           select:
@@ -99,6 +106,7 @@ export const fetchBookings = async (
             select: "firstName lastName phone profileImage email",
           },
         })
+        .populate("review")
         .sort(sort)
         .skip(skip)
         .limit(Number(limit))
@@ -119,9 +127,19 @@ export const fetchBooking = async (bookingId) => {
   try {
     const booking = await Booking.findById(bookingId)
       .populate("service", "name category")
-      .populate("worker", "name phone profileImage address location rating")
-      .populate("user", "name phone email profileImage address location rating")
-      .populate("review");
+      .populate(
+        "user",
+        "firstName lastName  phone email profileImage address location rating",
+      )
+      .populate({
+        path: "worker",
+        select:
+          "nationalIdFront nationalIdBack licenseImage availabilityStatus bio categories",
+        populate: {
+          path: "user",
+          select: "firstName lastName phone profileImage email",
+        },
+      });
 
     if (!booking) throw new NotFoundError("Booking");
     return booking;
@@ -140,15 +158,14 @@ export const updateBooking = async (
   selectedOptions,
 ) => {
   try {
-    const booking = await Booking.findById(id);
-    const user = await getUserProfile(userId);
-    console.log(user);
+    const booking = await Booking.findById(id)
+      .populate("service", "name category")
+      .populate("user", "firstName lastName phone email");
+
     if (!booking) throw new NotFoundError("Booking");
 
-    if (user.role === "user") {
-      if (!booking.canBeRescheduled()) {
-        throw new ValidationError("Booking cannot be modified at this stage");
-      }
+    if (!booking.canBeRescheduled()) {
+      throw new ValidationError("Booking cannot be modified at this stage");
     }
 
     if (scheduledDate) booking.scheduledDate = scheduledDate;
@@ -158,7 +175,35 @@ export const updateBooking = async (
     if (selectedOptions) booking.selectedOptions = selectedOptions;
 
     await booking.save();
-    return booking;
+
+    await cancelBookingById(booking._id, userId);
+
+    await notifyBookingUpdated(
+      userId,
+      {
+        booking_id: booking._id.toString(),
+        serviceName: booking.service.name,
+        fair: booking.totalAmount,
+        customer_name: `${booking.user.firstName} ${booking.user.lastName}`,
+        status: booking.status,
+      },
+      {
+        serviceName: booking.service.name,
+      },
+    );
+
+    const { booking: newBooking, dispatch } = await orderService(
+      booking.service._id,
+      booking.selectedOptions,
+      booking.price,
+      booking.scheduledDate,
+      booking.duration,
+      booking.location,
+      booking.notes,
+      booking.user._id,
+    );
+
+    return { newBooking, dispatch };
   } catch (err) {
     throw err;
   }
@@ -166,7 +211,9 @@ export const updateBooking = async (
 
 export const cancelBookingById = async (id, user, reason) => {
   try {
-    const booking = await Booking.findById(id).populate("service", "name");
+    const booking = await Booking.findById(id)
+      .populate("service", "name")
+      .populate("user", "firstName lastName phone email");
 
     if (!booking) throw new NotFoundError("Booking");
 
@@ -179,6 +226,7 @@ export const cancelBookingById = async (id, user, reason) => {
 
     booking.status = "cancelled";
     booking.cancellationReason = reason || "Cancelled by user";
+
     await booking.save();
 
     await BookingAssignment.updateMany(
@@ -189,14 +237,32 @@ export const cancelBookingById = async (id, user, reason) => {
       { status: "expired", responseNote: "Booking was cancelled" },
     );
 
-    await notifyBookingCancelled(booking.user, {
-      serviceName: booking.service?.name,
-    });
+    await notifyBookingCancelled(
+      booking.user,
+      {
+        booking_id: booking._id,
+        serviceName: booking.service?.name,
+        fair: booking.totalAmount,
+        customer_name: `${booking.user.firstName} ${booking.user.lastName}`,
+      },
+      {
+        serviceName: booking.service?.name,
+      },
+    );
 
     if (booking.worker) {
-      await notifyBookingCancelled(booking.worker, {
-        serviceName: booking.service?.name,
-      });
+      await notifyBookingCancelled(
+        booking.worker,
+        {
+          booking_id: booking._id,
+          serviceName: booking.service?.name,
+          fair: booking.totalAmount,
+          customer_name: `${booking.user.firstName} ${booking.user.lastName}`,
+        },
+        {
+          serviceName: booking.service?.name,
+        },
+      );
     }
 
     return booking;

@@ -41,6 +41,12 @@ const MESSAGES = {
     body: (d) =>
       `New ${d.serviceName} request near you — ${d.price} L.E. Respond within 30 min!`,
   },
+  booking_offer_updated: {
+    title: "Booking Details Updated",
+    body: (d) =>
+      `The details for your ${d.serviceName} request have been updated. Please review the new price and schedule.`,
+  },
+
   worker_assigned: {
     title: "You're Assigned!",
     body: (d) =>
@@ -68,22 +74,33 @@ const SOCKET_EVENT_MAP = {
   booking_accepted: EVENTS.BOOKING_ACCEPTED,
   booking_cancelled: EVENTS.BOOKING_CANCELLED,
   booking_completed: EVENTS.BOOKING_COMPLETED,
+  booking_offer_updated: EVENTS.BOOKING_UPDATED,
   worker_assigned: EVENTS.WORKER_ASSIGNED,
 };
 
-export const sendNotification = async (userId, type, data = {}) => {
+export const sendNotification = async (
+  userId,
+  type,
+  data = {},
+  messageData = {},
+) => {
   const template = MESSAGES[type];
+  // console.log(template);
+  // console.log(template.body(messageData));
+  // console.log(data);
+  // console.log(type);
   if (!template) {
     console.warn(`[Notification] Unknown type: ${type}`);
     return null;
   }
-  console.log(userId);
+  //console.log(userId);
   // 1. Save to DB
   const notification = await Notification.create({
     user: userId,
-    type: type in Notification.schema.path("type").enumValues ? type : "system",
     title: template.title,
-    body: template.body(data),
+    type: type || "system",
+    message: template.body(messageData),
+    metadata: data,
   });
 
   // 2. Emit socket event in real-time
@@ -92,8 +109,9 @@ export const sendNotification = async (userId, type, data = {}) => {
     notification: {
       _id: notification._id,
       title: notification.title,
-      body: notification.body,
+      body: notification.message,
       type: notification.type,
+      metadata: notification.data,
       createdAt: notification.createdAt,
     },
     ...data,
@@ -103,29 +121,32 @@ export const sendNotification = async (userId, type, data = {}) => {
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-export const notifyBookingCreated = (userId, data) =>
-  sendNotification(userId, "booking_created", data);
+export const notifyBookingCreated = (userId, data, messageData) =>
+  sendNotification(userId, "booking_created", data, messageData);
 
-export const notifyBookingAccepted = (userId, data) =>
-  sendNotification(userId, "booking_accepted", data);
+export const notifyBookingAccepted = (userId, data, messageData) =>
+  sendNotification(userId, "booking_accepted", data, messageData);
 
-export const notifyBookingCancelled = (userId, data) =>
-  sendNotification(userId, "booking_cancelled", data);
+export const notifyBookingCancelled = (userId, data, messageData) =>
+  sendNotification(userId, "booking_cancelled", data, messageData);
 
-export const notifyBookingCompleted = (userId, data) =>
-  sendNotification(userId, "booking_completed", data);
+export const notifyBookingCompleted = (userId, data, messageData) =>
+  sendNotification(userId, "booking_completed", data, messageData);
 
-export const notifyNewOffer = (userId, data) =>
-  sendNotification(userId, "new_booking_offer", data);
+export const notifyNewOffer = (userId, data, messageData) =>
+  sendNotification(userId, "new_booking_offer", data, messageData);
 
-export const notifyCounterOffer = (userId, data) =>
-  sendNotification(userId, "counter_offer_received", data);
+export const notifyCounterOffer = (userId, data, messageData) =>
+  sendNotification(userId, "counter_offer_received", data, messageData);
 
-export const notifyCounterAccepted = (userId, data) =>
-  sendNotification(userId, "counter_offer_accepted", data);
+export const notifyCounterAccepted = (userId, data, messageData) =>
+  sendNotification(userId, "counter_offer_accepted", data, messageData);
 
-export const notifyCounterRejected = (userId, data) =>
-  sendNotification(userId, "counter_offer_rejected", data);
+export const notifyCounterRejected = (userId, data, messageData) =>
+  sendNotification(userId, "counter_offer_rejected", data, messageData);
 
-export const notifyWorkerAssigned = (userId, data) =>
-  sendNotification(userId, "worker_assigned", data);
+export const notifyWorkerAssigned = (userId, data, messageData) =>
+  sendNotification(userId, "worker_assigned", data, messageData);
+
+export const notifyBookingUpdated = (userId, data, messageData) =>
+  sendNotification(userId, "booking_offer_updated", data, messageData);

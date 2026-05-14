@@ -15,7 +15,6 @@ export const getAssignment = async (id) => {
   if (!assignment) throw new NotFoundError("Assignment");
   return assignment;
 };
-
 export const getWorkerId = async (userId) => {
   try {
     const worker = await WorkerProfile.findOne({
@@ -26,14 +25,12 @@ export const getWorkerId = async (userId) => {
     throw err;
   }
 };
-
 export const assertWorkerOwns = async (assignment, userId) => {
   const worker = await getWorkerId(userId);
   if (assignment.worker.toString() !== worker._id.toString()) {
     throw new ForbiddenError("This assignment does not belong to you");
   }
 };
-
 export const assertUserOwnsBooking = (booking, userId) => {
   if (booking.user.toString() !== userId)
     throw new ForbiddenError("This booking does not belong to you");
@@ -64,15 +61,43 @@ export const acceptOffer = async (assignment) => {
         },
       });
 
-    await notifyBookingAccepted(booking.user._id, {
-      workerName: `${booking.worker.user.firstName} ${booking.worker.user.lastName}`,
-      serviceName: booking.service?.name,
-    });
+    await notifyBookingAccepted(
+      booking.user._id,
+      {
+        booking_id: booking._id.toString(),
+        assignment_id: assignment._id.toString(),
+        serviceName: booking.service.name,
+        fair: booking.totalAmount,
+        customer_name: `${booking.user.firstName} ${booking.user.lastName}`,
+        worker_id: assignment.worker,
+        worker_name: `${booking.worker.user.firstName} ${booking.worker.user.lastName}`,
+        status: booking.status,
+        scheduledDate: booking.scheduledDate,
+      },
+      {
+        workerName: `${booking.worker.user.firstName} ${booking.worker.user.lastName}`,
+        serviceName: booking.service?.name,
+      },
+    );
 
-    await notifyWorkerAssigned(assignment.worker, {
-      serviceName: booking.service?.name,
-      scheduledDate: booking.scheduledDate,
-    });
+    await notifyWorkerAssigned(
+      assignment.worker,
+      {
+        booking_id: booking._id.toString(),
+        assignment_id: assignment._id.toString(),
+        serviceName: booking.service.name,
+        fair: booking.totalAmount,
+        customer_name: `${booking.user.firstName} ${booking.user.lastName}`,
+        worker_id: assignment.worker,
+        worker_name: `${booking.worker.user.firstName} ${booking.worker.user.lastName}`,
+        status: booking.status,
+        scheduledDate: booking.scheduledDate,
+      },
+      {
+        serviceName: booking.service?.name,
+        scheduledDate: booking.scheduledDate,
+      },
+    );
     return { assignment, booking };
   } catch (err) {
     throw err;
@@ -101,11 +126,26 @@ export const counterOffer = async (assignment, counterPrice, note) => {
         select: "firstName lastName phone profileImage email",
       },
     });
-    await notifyCounterOffer(booking.user._id, {
-      workerName: `${Assignment.worker.user.firstName} ${Assignment.worker.user.lastName}`,
-      counterPrice,
-      originalPrice: Assignment.originalPrice,
-    });
+    await notifyCounterOffer(
+      booking.user._id,
+      {
+        booking_id: booking._id.toString(),
+        assignment_id: assignment._id.toString(),
+        counter_price: counterPrice,
+        original_price: Assignment.originalPrice,
+        service_name: booking.service.name,
+        customer_name: `${booking.user.firstName} ${booking.user.lastName}`,
+        worker_id: assignment.worker,
+        worker_name: `${booking.worker.user.firstName} ${booking.worker.user.lastName}`,
+        status: booking.status,
+        scheduled_date: booking.scheduledDate,
+      },
+      {
+        workerName: `${Assignment.worker.user.firstName} ${Assignment.worker.user.lastName}`,
+        counterPrice,
+        originalPrice: Assignment.originalPrice,
+      },
+    );
 
     return Assignment;
   } catch (err) {
@@ -115,19 +155,40 @@ export const counterOffer = async (assignment, counterPrice, note) => {
 
 export const acceptCounterOffer = async (assignmentId) => {
   try {
-    const assignment = await BookingAssignment.findById(assignmentId).populate({
-      path: "booking",
-      populate: { path: "service", select: "name" },
-    });
-
+    const assignment = await BookingAssignment.findById(assignmentId)
+      .populate({
+        path: "booking",
+        populate: { path: "service", select: "name" },
+      })
+      .populate({
+        path: "worker",
+        select:
+          "nationalIdFront nationalIdBack licenseImage availabilityStatus bio categories",
+        populate: {
+          path: "user",
+          select: "firstName lastName phone profileImage email",
+        },
+      });
     if (!assignment) throw new NotFoundError("Assignment");
 
     await assignment.userAccept();
 
-    await notifyCounterAccepted(assignment.worker, {
-      finalPrice: assignment.finalPrice,
-      serviceName: assignment.booking?.service?.name,
-    });
+    await notifyCounterAccepted(
+      assignment.worker,
+      {
+        booking_id: assignment.booking.toString(),
+        assignment_id: assignment._id.toString(),
+        final_price: assignment.finalPrice,
+        service_name: assignment.booking?.service?.name,
+        worker_id: assignment.worker,
+        worker_name: `${assignment.worker.user.firstName} ${assignment.worker.user.lastName}`,
+        status: assignment.status,
+      },
+      {
+        finalPrice: assignment.finalPrice,
+        serviceName: assignment.booking?.service?.name,
+      },
+    );
 
     return assignment;
   } catch (err) {
@@ -146,10 +207,22 @@ export const rejectCounterOffer = async (assignmentId) => {
 
     await assignment.userReject();
 
-    await notifyCounterRejected(assignment.worker, {
-      counterPrice: assignment.counterPrice,
-      serviceName: assignment.booking?.service?.name,
-    });
+    await notifyCounterRejected(
+      assignment.worker,
+      {
+        booking_id: assignment.booking.toString(),
+        assignment_id: assignment._id.toString(),
+        counter_price: assignment.counterPrice,
+        service_name: assignment.booking?.service?.name,
+        worker_id: assignment.worker,
+        worker_name: `${assignment.worker.user.firstName} ${assignment.worker.user.lastName}`,
+        status: assignment.status,
+      },
+      {
+        counterPrice: assignment.counterPrice,
+        serviceName: assignment.booking?.service?.name,
+      },
+    );
 
     return assignment;
   } catch (err) {

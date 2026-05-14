@@ -7,6 +7,8 @@ import BookingAssignment from "../bookingAssignment/BookingAssignment.model.js";
 import Review from "../reviews/Review.model.js";
 import Category from "../categories/Category.model.js";
 import { changeUserPassword, updateUser } from "../users/user.service.js";
+import { NotFoundError } from "../../core/utils/Errors.js";
+import { notifyBookingCompleted } from "../notifications/Notification.service.js";
 
 export const getUserIdsByName = async (name) => {
   try {
@@ -33,6 +35,7 @@ export const getCategoryIdByName = async (categoryName) => {
     throw new Error(error.message);
   }
 };
+
 export const fetchAllWorkers = async (filters) => {
   try {
     const { page = 1, limit = 10, category, status, name, id } = filters;
@@ -153,29 +156,29 @@ export const updateWorkerFullProfile = async (userId, updateBody) => {
   }
 };
 
-export const getFullWorkerProfile = async (userId) => {
-  try {
-    const profile = await WorkerProfile.findOne({ user: userId })
-      .populate(
-        "user",
-        "firstName lastName email phone profileImage isVerified",
-      )
-      .populate("categories", "name")
-      .select(
-        "experienceYears city availabilityStatus availability bio approvalStatus createdAt",
-      );
-
-    if (!profile) throw new Error("Worker profile not found");
-
-    const wallet = await Wallet.findOne({ owner: userId }).select(
-      "balance currency isActive",
-    );
-
-    return { profile, wallet };
-  } catch (error) {
-    throw new Error(error.message);
-  }
-};
+// export const getFullWorkerProfile = async (userId) => {
+//   try {
+//     const profile = await WorkerProfile.findOne({ user: userId })
+//       .populate(
+//         "user",
+//         "firstName lastName email phone profileImage isVerified",
+//       )
+//       .populate("categories", "name")
+//       .select(
+//         "experienceYears city availabilityStatus availability bio approvalStatus createdAt",
+//       );
+//
+//     if (!profile) throw new Error("Worker profile not found");
+//
+//     const wallet = await Wallet.findOne({ owner: userId }).select(
+//       "balance currency isActive",
+//     );
+//
+//     return { profile, wallet };
+//   } catch (error) {
+//     throw new Error(error.message);
+//   }
+// };
 
 export const updateGeoLocation = async (userId, lat, lng) => {
   if (!userId) throw new Error("User ID is required");
@@ -256,30 +259,30 @@ export const getPendingAssignments = async (userId) => {
   }
 };
 
-export const getWorkerBookings = async (userId, status) => {
-  try {
-    const workerProfile = await WorkerProfile.findOne({ user: userId });
-
-    if (!workerProfile) {
-      throw new Error("This user does not have a worker profile");
-    }
-    const query = { worker: workerProfile._id };
-
-    if (status) {
-      query.status = status;
-    } else {
-      query.status = { $in: ["accepted", "in-progress", "completed"] };
-    }
-    const Bookings = await Booking.find(query)
-      .populate("user", "firstName lastName phone profileImage")
-      .populate("service", "name")
-      .sort("-scheduledDate");
-
-    return Bookings;
-  } catch (e) {
-    throw new Error(e.message);
-  }
-};
+// export const getWorkerBookings = async (userId, status) => {
+//   try {
+//     const workerProfile = await WorkerProfile.findOne({ user: userId });
+//
+//     if (!workerProfile) {
+//       throw new Error("This user does not have a worker profile");
+//     }
+//     const query = { worker: workerProfile._id };
+//
+//     if (status) {
+//       query.status = status;
+//     } else {
+//       query.status = { $in: ["accepted", "in-progress", "completed"] };
+//     }
+//     const Bookings = await Booking.find(query)
+//       .populate("user", "firstName lastName phone profileImage")
+//       .populate("service", "name")
+//       .sort("-scheduledDate");
+//
+//     return Bookings;
+//   } catch (e) {
+//     throw new Error(e.message);
+//   }
+// };
 
 export const getWorkerReviews = async (userId) => {
   try {
@@ -331,5 +334,35 @@ export const deleteworker = async (userId) => {
     return deletedUser;
   } catch (e) {
     throw new Error(e.message);
+  }
+};
+
+export const markBookingComplete = async (id, userId) => {
+  try {
+    const worker = await fetchWorkerById(userId);
+
+    const booking = await Booking.findById({ _id: id, worker: worker._id })
+      .populate("service", "name")
+      .populate("user", "firstName lastName");
+
+    if (!booking) throw new NotFoundError("Booking");
+
+    booking.status = "completed";
+    await booking.save();
+
+    await notifyBookingCompleted(booking.user._id, {
+      title: "Service Completed",
+      metadata: {
+        booking_id: booking._id.toString(),
+        service_name: booking.service.name,
+        fair: booking.totalAmount,
+        customer_name: `${booking.user.firstName} ${booking.user.lastName}`,
+      },
+      messageData: { serviceName: booking.service.name },
+    });
+
+    return booking;
+  } catch (err) {
+    throw err;
   }
 };

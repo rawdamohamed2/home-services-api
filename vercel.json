@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "installCommand": "npm install --force",
+  "installCommand": "npm install",
   "builds": [
     {
       "src": "server.js",

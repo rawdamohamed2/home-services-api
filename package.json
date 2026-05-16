@@ -20,9 +20,9 @@
     "cloudinary": "^2.9.0",
     "compression": "^1.8.1",
     "cors": "^2.8.6",
-    "debug": "^4.4.3",
+    "debug": "^4.3.4",
     "dotenv": "^17.3.1",
-    "express": "^5.2.1",
+    "express": "^4.19.2",
     "express-rate-limit": "^8.2.1",
     "express-validator": "^7.3.1",
     "firebase-admin": "^13.10.0",
@@ -33,14 +33,14 @@
     "mongoose": "8.2.1",
     "morgan": "^1.10.1",
     "multer": "^2.1.1",
-    "node-cron": "^4.2.1",
+    "node-cron": "^3.0.3",
     "nodemailer": "^8.0.1",
-    "nodemon": "^3.1.14",
     "sib-api-v3-sdk": "^8.5.0",
-    "socket.io": "^4.8.3",
+    "socket.io": "^4.7.5",
     "twilio": "^5.12.2"
   },
   "devDependencies": {
+    "nodemon": "^3.1.14",
     "prettier": "^3.8.3"
   }
 }

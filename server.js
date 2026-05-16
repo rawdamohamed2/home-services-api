@@ -1,24 +1,34 @@
 import dotenv from "dotenv";
 dotenv.config();
-import app from "./src/app.js";
+import app, { httpServer } from "./src/app.js"; // تأكدي من صحة مسار ملف app.js
 import connectDB from "./src/core/config/db.js";
-import { httpServer } from "./src/app.js";
 import { initSocket } from "./src/socket/socket.js";
 import { startCronJobs } from "./src/core/utils/cron.js";
+import { initFirebase } from "./src/core/firebase/firebase.js";
 
 const PORT = process.env.PORT || 5000;
 
-const startServer = async () => {
+// دالة تهيئة الخدمات الأساسية
+const initializeServices = async () => {
   try {
     await connectDB();
+    initFirebase();
     initSocket(httpServer);
-    startCronJobs();
-    httpServer.listen(PORT, () => {
-      console.log(`Server started on port ${PORT}`);
-    });
   } catch (err) {
-    console.log("Database connection error:", err.message);
+    console.error("Initialization error:", err.message);
   }
 };
 
-startServer();
+// تشغيل الخدمات فوراً عند قيام السيرفر بقراءة الملف
+initializeServices();
+
+// 💡 الشرط السحري: تشغيل الـ listen والـ cron فقط محلياً (Local Development)
+if (process.env.NODE_ENV !== "production") {
+  startCronJobs();
+  httpServer.listen(PORT, () => {
+    console.log(`🚀 Local Server started on port ${PORT}`);
+  });
+}
+
+// تصدير كائن السيرفر ليتولى Vercel تشغيله بأسلوبه السحابي النظيف
+export default httpServer;

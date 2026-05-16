@@ -1,6 +1,8 @@
+import mongoose from "mongoose";
 import Notification from "./Notification.model.js";
 import { emitToUser } from "../../socket/socket.js";
 import { EVENTS } from "../../socket/socket.events.js";
+import { sendFCM } from "../../core/firebase/fcm.js";
 
 const MESSAGES = {
   booking_created: {
@@ -42,11 +44,10 @@ const MESSAGES = {
       `New ${d.serviceName} request near you — ${d.price} L.E. Respond within 30 min!`,
   },
   booking_offer_updated: {
-    title: "Booking Details Updated",
+    title: "Booking Updated",
     body: (d) =>
-      `The details for your ${d.serviceName} request have been updated. Please review the new price and schedule.`,
+      `The details for your ${d.serviceName} request have been updated.`,
   },
-
   worker_assigned: {
     title: "You're Assigned!",
     body: (d) =>
@@ -85,16 +86,11 @@ export const sendNotification = async (
   messageData = {},
 ) => {
   const template = MESSAGES[type];
-  // console.log(template);
-  // console.log(template.body(messageData));
-  // console.log(data);
-  // console.log(type);
   if (!template) {
-    console.warn(`[Notification] Unknown type: ${type}`);
+    console.warn("[Notification] Unknown type:", type);
     return null;
   }
-  //console.log(userId);
-  // 1. Save to DB
+
   const notification = await Notification.create({
     user: userId,
     title: template.title,
@@ -103,50 +99,56 @@ export const sendNotification = async (
     metadata: data,
   });
 
-  // 2. Emit socket event in real-time
-  const socketEvent = SOCKET_EVENT_MAP[type] || EVENTS.NOTIFICATION;
-  emitToUser(userId, socketEvent, {
+  const payload = {
     notification: {
       _id: notification._id,
       title: notification.title,
       body: notification.message,
       type: notification.type,
-      metadata: notification.data,
+      metadata: data,
       createdAt: notification.createdAt,
     },
     ...data,
-  });
+  };
+
+  const socketEvent = SOCKET_EVENT_MAP[type] || EVENTS.NOTIFICATION;
+  emitToUser(userId, socketEvent, payload);
+
+  const User = mongoose.model("User");
+  const user = await User.findById(userId).select("fcmToken").lean();
+
+  if (user?.fcmToken) {
+    const fcmResult = await sendFCM(user.fcmToken, {
+      title: template.title,
+      body: template.body(messageData),
+      data: { type, notificationId: notification._id.toString(), ...data },
+    });
+
+    if (fcmResult?.invalidToken) {
+      await User.findByIdAndUpdate(userId, { $unset: { fcmToken: 1 } });
+    }
+  }
 
   return notification;
 };
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-export const notifyBookingCreated = (userId, data, messageData) =>
-  sendNotification(userId, "booking_created", data, messageData);
-
-export const notifyBookingAccepted = (userId, data, messageData) =>
-  sendNotification(userId, "booking_accepted", data, messageData);
-
-export const notifyBookingCancelled = (userId, data, messageData) =>
-  sendNotification(userId, "booking_cancelled", data, messageData);
-
-export const notifyBookingCompleted = (userId, data, messageData) =>
-  sendNotification(userId, "booking_completed", data, messageData);
-
-export const notifyNewOffer = (userId, data, messageData) =>
-  sendNotification(userId, "new_booking_offer", data, messageData);
-
-export const notifyCounterOffer = (userId, data, messageData) =>
-  sendNotification(userId, "counter_offer_received", data, messageData);
-
-export const notifyCounterAccepted = (userId, data, messageData) =>
-  sendNotification(userId, "counter_offer_accepted", data, messageData);
-
-export const notifyCounterRejected = (userId, data, messageData) =>
-  sendNotification(userId, "counter_offer_rejected", data, messageData);
-
-export const notifyWorkerAssigned = (userId, data, messageData) =>
-  sendNotification(userId, "worker_assigned", data, messageData);
-
-export const notifyBookingUpdated = (userId, data, messageData) =>
-  sendNotification(userId, "booking_offer_updated", data, messageData);
+export const notifyBookingCreated = (u, d, m) =>
+  sendNotification(u, "booking_created", d, m);
+export const notifyBookingAccepted = (u, d, m) =>
+  sendNotification(u, "booking_accepted", d, m);
+export const notifyBookingCancelled = (u, d, m) =>
+  sendNotification(u, "booking_cancelled", d, m);
+export const notifyBookingCompleted = (u, d, m) =>
+  sendNotification(u, "booking_completed", d, m);
+export const notifyNewOffer = (u, d, m) =>
+  sendNotification(u, "new_booking_offer", d, m);
+export const notifyCounterOffer = (u, d, m) =>
+  sendNotification(u, "counter_offer_received", d, m);
+export const notifyCounterAccepted = (u, d, m) =>
+  sendNotification(u, "counter_offer_accepted", d, m);
+export const notifyCounterRejected = (u, d, m) =>
+  sendNotification(u, "counter_offer_rejected", d, m);
+export const notifyWorkerAssigned = (u, d, m) =>
+  sendNotification(u, "worker_assigned", d, m);
+export const notifyBookingUpdated = (u, d, m) =>
+  sendNotification(u, "booking_offer_updated", d, m);

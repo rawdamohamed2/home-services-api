@@ -5,7 +5,7 @@ export const checkPermission = (requiredPermission) => {
   return async (req, res, next) => {
     try {
       const userRole = req.user.role;
-
+      console.log(userRole);
       if (userRole === "owner") {
         return next();
       }

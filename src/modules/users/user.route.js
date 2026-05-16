@@ -5,6 +5,7 @@ import {
   changePassword,
   uploadPhoto,
   deletePhoto,
+  addFcmToken,
 } from "./user.controller.js";
 import { protect } from "../../core/middleware/authMiddleware.js";
 import { validate } from "../../core/middleware/validate.js";
@@ -24,6 +25,8 @@ userRouter.patch(
   validate(updateProfileSchema),
   updateMyProfile,
 );
+
+userRouter.patch("/fcm-token", protect, addFcmToken);
 
 userRouter.post(
   "/change-password",

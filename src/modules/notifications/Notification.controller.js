@@ -10,7 +10,7 @@ export const getNotifications = async (req, res) => {
     const result = await Notification.getUserNotifications(userId, {
       page: Number(page) || 1,
       limit: Number(limit) || 20,
-      isRead: isRead !== undefined ? isRead === false : null,
+      isRead: isRead !== undefined ? isRead === "true" : null,
       type: type || null,
     });
 

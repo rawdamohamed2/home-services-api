@@ -161,6 +161,8 @@ const userSchema = new mongoose.Schema(
       },
     },
 
+    fcmToken: { type: String, default: null },
+
     lastLogin: Date,
 
     verifyOtp: String,

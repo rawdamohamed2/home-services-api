@@ -5,12 +5,13 @@ import connectDB from "./src/core/config/db.js";
 import { httpServer } from "./src/app.js";
 import { initSocket } from "./src/socket/socket.js";
 import { startCronJobs } from "./src/core/utils/cron.js";
-
+import { initFirebase } from "./src/core/firebase/firebase.js";
 const PORT = process.env.PORT || 5000;
 
 const startServer = async () => {
   try {
     await connectDB();
+    initFirebase();
     initSocket(httpServer);
     startCronJobs();
     httpServer.listen(PORT, () => {

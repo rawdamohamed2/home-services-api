@@ -118,7 +118,7 @@ notificationSchema.statics.getUserNotifications = async function (
   userId,
   options = {},
 ) {
-  const { page = 1, limit = 20, isRead = false, type = null } = options;
+  const { page = 1, limit = 20, isRead = null, type = null } = options;
   console.log(page, limit, isRead, type);
 
   const query = {};

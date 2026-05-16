@@ -11,6 +11,7 @@ import {
   updateLastLogin,
   processPasswordReset,
 } from "./auth.service.js";
+import errorHandler from "../../core/middleware/Errorhandler.js";
 
 const sendAuthResponse = (res, user, token, message, extraData = {}) => {
   res.cookie("token", token, {
@@ -112,13 +113,20 @@ export const login = async (req, res) => {
 };
 
 export const logout = async (req, res) => {
-  res.cookie("token", "", {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
-    expires: new Date(0),
-  });
-  return ApiResponse.success(res, null, "user Logout successfully");
+  try {
+    await User.findByIdAndUpdate(req.user.id, { fcmToken: null });
+
+    res.cookie("token", "", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+      expires: new Date(0),
+    });
+
+    return ApiResponse.success(res, null, "user Logout successfully");
+  } catch (err) {
+    errorHandler(err, req, res);
+  }
 };
 
 export const sendVerifyOtp = async (req, res) => {

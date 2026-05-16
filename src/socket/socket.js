@@ -4,10 +4,6 @@ import jwt from "jsonwebtoken";
 let io;
 
 export const initSocket = (httpServer) => {
-  if (process.env.VERCEL) {
-    console.warn("⚠️  Socket.io disabled on Vercel");
-    return null;
-  }
   io = new Server(httpServer, {
     cors: {
       origin: process.env.CLIENT_URL || "*",

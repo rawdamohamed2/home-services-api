@@ -6,8 +6,8 @@ import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
 import { createServer } from "http";
-
-// Imports لـ Routes وموديلاتكِ الجميلة تظل كما هي...
+import connectDB from "./core/config/db.js";
+import "./modules/categories/Category.model.js";
 import authRoutes from "./modules/auth/auth.route.js";
 import workerRoutes from "./modules/workers/worker.route.js";
 import userRoutes from "./modules/users/user.route.js";
@@ -23,6 +23,8 @@ import assignmentsRoutes from "./modules/bookingAssignment/bookingAssignment.rou
 const app = express();
 const httpServer = createServer(app);
 
+connectDB();
+
 app.use(express.json());
 app.use(helmet());
 app.use(cors());
@@ -33,7 +35,6 @@ if (process.env.NODE_ENV === "development") {
 }
 
 console.log("📊 Registered models:", mongoose.modelNames());
-
 app.use("/api/auth", authRoutes);
 app.use("/api/workers", workerRoutes);
 app.use("/api/assignments", assignmentsRoutes);

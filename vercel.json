@@ -3,14 +3,7 @@
   "builds": [
     {
       "src": "server.js",
-      "use": "@vercel/node",
-      "config": {
-        "includeFiles": [
-          "node_modules/express/**/*",
-          "node_modules/debug/**/*",
-          "node_modules/mongoose/**/*"
-        ]
-      }
+      "use": "@vercel/node"
     }
   ],
   "routes": [

@@ -23,6 +23,8 @@ import assignmentsRoutes from "./modules/bookingAssignment/bookingAssignment.rou
 const app = express();
 const httpServer = createServer(app);
 
+connectDB();
+
 app.use(express.json());
 app.use(helmet());
 app.use(cors());

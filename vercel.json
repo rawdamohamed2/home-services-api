@@ -1,16 +1,22 @@
 {
   "version": 2,
-  "installCommand": "npm install --force",
   "builds": [
     {
-      "src": "server.js",
-      "use": "@vercel/node"
+      "src": "api/index.js",
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": [
+          "node_modules/express/**/*",
+          "node_modules/debug/**/*",
+          "node_modules/mongoose/**/*"
+        ]
+      }
     }
   ],
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "server.js"
+      "dest": "api/index.js"
     }
   ]
 }

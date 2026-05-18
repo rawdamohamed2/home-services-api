@@ -52,9 +52,9 @@ export const baseRegisterSchema = Joi.object({
 
 export const userRegisterSchema = baseRegisterSchema
   .keys({
-    // role: Joi.string().valid("user").default("user").optional().messages({
-    //   "any.only": "The role Must be user",
-    // }),
+    role: Joi.string().valid("user").default("user").optional().messages({
+      "any.only": "The role Must be user",
+    }),
 
     enabledLocation: Joi.boolean().default(false),
 
@@ -80,7 +80,7 @@ export const userRegisterSchema = baseRegisterSchema
           "any.required":
             "Location details are required when location is enabled",
         }),
-      otherwise: Joi.optional().allow(null, {}), // أو Joi.forbidden() لو عاوزه تمنعي إرساله تماماً
+      otherwise: Joi.optional().allow(null, {}),
     }),
   })
   .unknown(false);

@@ -114,7 +114,8 @@ export const login = async (req, res) => {
 
 export const logout = async (req, res) => {
   try {
-    await User.findByIdAndUpdate(req.user.id, { fcmToken: null });
+    const userId = req.user.id;
+    await User.findByIdAndUpdate(userId, { fcmToken: null });
 
     res.cookie("token", "", {
       httpOnly: true,

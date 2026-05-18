@@ -32,7 +32,8 @@ authRouter.post(
   registerWorker,
 );
 authRouter.post("/login", validate(loginSchema), login);
-authRouter.post("/logout", logout);
+
+authRouter.post("/logout", protect, logout);
 
 authRouter.post("/send-verify-otp", protect, validate(idSchema), sendVerifyOtp);
 authRouter.post(

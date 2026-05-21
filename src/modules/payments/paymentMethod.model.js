@@ -1,79 +1,108 @@
-import mongoose from 'mongoose';
+import mongoose from "mongoose";
 
-const paymentMethodSchema = new mongoose.Schema({
+const paymentMethodSchema = new mongoose.Schema(
+  {
+    owner: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: [true, "Owner is required"],
+    },
 
-    user: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-        required: [true, 'User is required']
+    ownerType: {
+      type: String,
+      enum: ["user", "worker"],
+      required: true,
     },
 
     type: {
-        type: String,
-        enum: {
-            values: ["card", "instapay", "bank_account", "vodafone_cash"],
-            message: 'Invalid payment method type'
-        },
-        required: true
+      type: String,
+      enum: {
+        values: ["card", "instapay"],
+        message: "Invalid payment method type",
+      },
+      required: true,
     },
 
-    provider: {
-        type: String,
-        enum: ['Visa', 'Mastercard', 'Mada', 'American Express']
+    cardholderName: {
+      type: String,
+      trim: true,
     },
 
     last4Digits: {
-        type: String,
-        match: [/^\d{4}$/, 'Last 4 digits must be 4 numbers']
-    },
-    cardBrand: String,
-    expiryMonth: String,
-    expiryYear: String,
-    cardToken: String,
-
-    instapayNumber: {
-        type: String,
-        match: [/^[\d@]+$/, 'Invalid instapay number']
+      type: String,
+      match: [/^\d{4}$/, "Last 4 digits must be exactly 4 numbers"],
     },
 
-    bankName: String,
-    accountNumber: String,
-    accountName: String,
-    iban: String,
-
-    phoneNumber: {
-        type: String,
-        match: [/^01[0125][0-9]{8}$/, 'Invalid phone number']
+    cardBrand: {
+      type: String,
+      enum: ["Visa", "Mastercard", "Unknown"],
+      default: "Unknown",
     },
+
+    expiryMonth: {
+      type: String,
+      match: [/^(0[1-9]|1[0-2])$/, "Invalid expiry month (MM)"],
+    },
+
+    expiryYear: {
+      type: String,
+      match: [/^\d{2}$/, "Invalid expiry year (YY)"],
+    },
+
+    cardToken: {
+      type: String,
+      select: false, 
+    },
+
+    instapayId: {
+      type: String,
+      trim: true,
+    },
+
+    accountHolderName: {
+      type: String,
+      trim: true,
+    },
+
     isDefault: {
-        type: Boolean,
-        default: false
+      type: Boolean,
+      default: false,
     },
 
-    isVerified: {
-        type: Boolean,
-        default: false
+    isActive: {
+      type: Boolean,
+      default: true,
     },
-
-    verifiedAt: Date
-
-}, {
+  },
+  {
     timestamps: true,
     toJSON: { virtuals: true },
-    toObject: { virtuals: true }
+    toObject: { virtuals: true },
+  }
+);
+
+paymentMethodSchema.pre("save", async function (next) {
+  if (this.isDefault) {
+    await this.constructor.updateMany(
+      { owner: this.owner, ownerType: this.ownerType, _id: { $ne: this._id } },
+      { isDefault: false }
+    );
+  }
+  next();
 });
 
-paymentMethodSchema.index({ user: 1, isDefault: -1 });
-paymentMethodSchema.index({ user: 1, type: 1 });
+paymentMethodSchema.methods.detectCardBrand = function (cardNumber) {
+  if (!cardNumber) return "Unknown";
+  const firstDigit = cardNumber.toString()[0];
+  if (firstDigit === "4") return "Visa";
+  if (firstDigit === "5") return "Mastercard";
+  return "Unknown";
+};
 
-paymentMethodSchema.pre('save', async function(next) {
-    if (this.isDefault) {
-        await this.constructor.updateMany(
-            { user: this.user, _id: { $ne: this._id } },
-            { isDefault: false }
-        );
-    }
-    next();
-});
+paymentMethodSchema.index({ owner: 1, ownerType: 1, isDefault: -1 });
+paymentMethodSchema.index({ owner: 1, type: 1 });
 
-module.exports = mongoose.model("PaymentMethod", paymentMethodSchema);
+const PaymentMethod =
+  mongoose.models.PaymentMethod ||
+  mongoose.model("PaymentMethod", paymentMethodSchema);
+export default PaymentMethod;

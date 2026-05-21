@@ -63,10 +63,10 @@ const walletTransactionSchema = new mongoose.Schema(
     balanceBefore: { type: Number, default: 0 },
     balanceAfter: { type: Number, default: 0 },
 
-    note: {
-      type: String,
-      maxlength: [200, "Note too long"],
-    },
+  note: {
+    type: String,
+    maxlength: [1000, 'Note too long'],  
+},
 
     completedAt: Date,
     failedReason: String,

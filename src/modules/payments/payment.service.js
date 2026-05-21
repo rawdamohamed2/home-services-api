@@ -186,7 +186,7 @@ const _releasePaymentToWorker = async (payment) => {
     source: "booking_payment",
     referenceId: payment.booking,
     referenceModel: "Booking",
-    note: `Earnings from booking #${payment.booking}`,
+    note: `Earnings: ${payment.booking.toString().slice(-8)}`,  
   });
 };
 
@@ -200,6 +200,6 @@ const _deductCashCommissionFromWorker = async (payment) => {
     source: "booking_commission",
     referenceId: payment.booking,
     referenceModel: "Booking",
-    note: `Platform commission 10% for booking #${payment.booking}`,
+    note: `Fee: ${payment.booking.toString().slice(-8)}`,  
   });
 };

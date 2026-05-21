@@ -44,7 +44,7 @@ bookingRouter.get(
 
 bookingRouter.get(
   "/:id",
-  checkPermissionAndRole("user", "manage_bookings"),
+  //checkPermissionAndRole("user", "manage_bookings"),
   validate(IdBookingValidation),
   getBooking,
 );
@@ -58,14 +58,14 @@ bookingRouter.patch(
 
 bookingRouter.patch(
   "/:id/cancel",
-  checkPermissionAndRole("user", "manage_bookings"),
+  //checkPermissionAndRole("user", "manage_bookings"),
   validate(cancelBookingValidation),
   cancelBooking,
 );
 
 bookingRouter.get(
   "/:id/timeline",
-  isStaff,
+  checkPermissionAndRole("user", "manage_bookings"),
   validate(IdBookingValidation),
   getBookingTimeline,
 );

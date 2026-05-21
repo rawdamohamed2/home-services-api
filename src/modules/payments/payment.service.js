@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import Payment from "./Payment.model.js";
-import PaymentMethod from "./PaymentMethod.model.js";
+import PaymentMethod from "./paymentMethod.model.js";
 import Booking from "../bookings/Booking.model.js";
 import BookingAssignment from "../bookingAssignment/BookingAssignment.model.js";
 import Wallet from "../wallet/Wallet.model.js";

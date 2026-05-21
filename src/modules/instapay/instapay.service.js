@@ -4,9 +4,7 @@ import { verifyReceiptWithAI } from "./aiDetection.service.js";
 import { uploadReceiptToCloudinary } from "../../core/services/cloudinary.service.js";
 import { getWorkerWalletByProfileId } from "../payments/payment.service.js";
 
-// ═══════════════════════════════════════════════════════════
 //  User — Verify Receipt (AI)
-// ═══════════════════════════════════════════════════════════
 
 export const verifyInstapayReceipt = async (paymentId, imageBuffer, mimetype, originalname) => {
   const payment = await Payment.findById(paymentId);
@@ -16,11 +14,9 @@ export const verifyInstapayReceipt = async (paymentId, imageBuffer, mimetype, or
   if (payment.status !== "pending_verification")
     throw new Error("Payment is not awaiting verification");
 
-  // رفع الصورة على Cloudinary
   const imageUrl = await uploadReceiptToCloudinary(imageBuffer, paymentId);
   payment.paymentProofImage = imageUrl;
 
-  // تشغيل الـ AI
   const aiResult = await verifyReceiptWithAI(imageBuffer, mimetype, originalname);
 
   payment.aiVerificationResult = {
@@ -42,9 +38,7 @@ export const verifyInstapayReceipt = async (paymentId, imageBuffer, mimetype, or
   };
 };
 
-// ═══════════════════════════════════════════════════════════
 //  Admin — InstaPay Payments
-// ═══════════════════════════════════════════════════════════
 
 export const getAdminInstapayPayments = async (query = {}) => {
   const { page = 1, limit = 10, status = "pending_verification" } = query;

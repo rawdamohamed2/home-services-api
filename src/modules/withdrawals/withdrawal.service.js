@@ -1,6 +1,6 @@
 import Withdrawal from "./Withdrawal.model.js";
 import Wallet from "../wallet/Wallet.model.js";
-import PaymentMethod from "../payments/PaymentMethod.model.js";
+import PaymentMethod from "../payments/paymentMethod.model.js";
 
 //  Worker — Withdrawal Methods
 

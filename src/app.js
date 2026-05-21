@@ -19,6 +19,11 @@ import roleRoutes from "./modules/rolePermissions/rolePermission.route.js";
 import bookingRoutes from "./modules/bookings/booking.route.js";
 import notificationsRoutes from "./modules/notifications/Notification.routes.js";
 import assignmentsRoutes from "./modules/bookingAssignment/bookingAssignment.route.js";
+import paymentRouter         from "./modules/payments/payment.route.js";
+import walletRouter          from "./modules/wallet/wallet.route.js";
+import withdrawalAdminRouter from "./modules/withdrawals/withdrawalAdmin.route.js";
+import instapayRouter        from "./modules/instapay/instapay.route.js";
+import adminPaymentRouter    from "./modules/adminPayments/adminPayment.route.js";
 
 const app = express();
 const httpServer = createServer(app);
@@ -46,6 +51,11 @@ app.use("/api/admin/notifications", adminNotificationRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/categories", categoryRoutes);
 app.use("/api/role-permissions", roleRoutes);
+app.use("/api/payments",                    paymentRouter);
+app.use("/api/wallet",                      walletRouter);
+app.use("/api/admin/payments/withdrawals",  withdrawalAdminRouter);
+app.use("/api/admin/payments/instapay",     instapayRouter);
+app.use("/api/admin/payments",              adminPaymentRouter);
 
 app.get("/", (req, res) => {
   res.status(200).json({

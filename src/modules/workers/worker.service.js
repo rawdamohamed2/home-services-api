@@ -2,7 +2,7 @@ import WorkerProfile from "./WorkerProfile.model.js";
 import User from "../users/user.model.js";
 import Booking from "../bookings/Booking.model.js";
 import mongoose from "mongoose";
-import Wallet from '../wallet/Wallet.model.js';
+import Wallet from "../payments/Wallet.model.js";
 import BookingAssignment from "../bookingAssignment/BookingAssignment.model.js";
 import Review from "../reviews/Review.model.js";
 import Category from "../categories/Category.model.js";

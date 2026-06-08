@@ -7,7 +7,6 @@ import {
   createPlanSchema,
   updatePlanSchema,
   addFeatureSchema,
-  updateStatusSchema,
 } from "./subscription.validation.js";
 
 const router = express.Router();

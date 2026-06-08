@@ -19,6 +19,7 @@ import roleRoutes from "./modules/rolePermissions/rolePermission.route.js";
 import bookingRoutes from "./modules/bookings/booking.route.js";
 import notificationsRoutes from "./modules/notifications/Notification.routes.js";
 import assignmentsRoutes from "./modules/bookingAssignment/bookingAssignment.route.js";
+import ChatRoutes from "./modules/chats/Chat.route.js";
 
 const app = express();
 const httpServer = createServer(app);
@@ -46,6 +47,7 @@ app.use("/api/admin/notifications", adminNotificationRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/categories", categoryRoutes);
 app.use("/api/role-permissions", roleRoutes);
+app.use("/api/chat", ChatRoutes);
 
 app.get("/", (req, res) => {
   res.status(200).json({

@@ -1,14 +1,13 @@
 import { Server } from "socket.io";
 import jwt from "jsonwebtoken";
+import ChatRoom from "../modules/chats/ChatRoom.model.js";
 
 let io;
+const onlineUsers = new Map();
 
 export const initSocket = (httpServer) => {
   io = new Server(httpServer, {
-    cors: {
-      origin: process.env.CLIENT_URL || "*",
-      credentials: true,
-    },
+    cors: { origin: process.env.CLIENT_URL || "*", credentials: true },
   });
 
   io.use((socket, next) => {
@@ -16,6 +15,7 @@ export const initSocket = (httpServer) => {
       socket.handshake.auth?.token ||
       socket.handshake.headers?.token ||
       socket.handshake.query?.token;
+
     if (!token) return next(new Error("No token provided"));
 
     try {
@@ -29,14 +29,76 @@ export const initSocket = (httpServer) => {
   });
 
   io.on("connection", (socket) => {
+    // ── Online tracking ──────────────────────────────────────────
+    if (!onlineUsers.has(socket.userId)) {
+      onlineUsers.set(socket.userId, new Set());
+    }
+    onlineUsers.get(socket.userId).add(socket.id);
+
     console.log(`🔌 Connected: ${socket.userId} (${socket.role})`);
-    console.log(`👥 Total online: ${io.engine.clientsCount}`);
+    console.log(`👥 Online users: ${onlineUsers.size}`);
 
     socket.join(`user:${socket.userId}`);
 
-    socket.on("disconnect", () => {
-      console.log(`❌ Disconnected: ${socket.userId} — reason: ${reason}`);
-      console.log(`👥 Total online: ${io.engine.clientsCount}`);
+    // ── Room join ────────────────────────────────────────────────
+    socket.on("room:join", async ({ roomId }) => {
+      try {
+        if (!roomId) return;
+        const room = await ChatRoom.findById(roomId);
+        if (!room || !room.isParticipant(socket.userId)) return;
+        socket.join(`room:${roomId}`);
+        socket.emit("room:joined", { roomId });
+        console.log(`[Socket] ${socket.userId} joined room:${roomId}`);
+      } catch (err) {
+        console.error("[Socket] room:join error:", err.message);
+      }
+    });
+
+    // ── Room leave ───────────────────────────────────────────────
+    socket.on("room:leave", ({ roomId }) => {
+      socket.leave(`room:${roomId}`);
+    });
+
+    // ── Typing ───────────────────────────────────────────────────
+    socket.on("typing:start", ({ roomId }) => {
+      socket.to(`room:${roomId}`).emit("typing:start", {
+        roomId,
+        userId: socket.userId,
+      });
+    });
+
+    socket.on("typing:stop", ({ roomId }) => {
+      socket.to(`room:${roomId}`).emit("typing:stop", {
+        roomId,
+        userId: socket.userId,
+      });
+    });
+
+    // ── Mark as read ─────────────────────────────────────────────
+    socket.on("messages:read", async ({ roomId }) => {
+      try {
+        const room = await ChatRoom.findById(roomId);
+        if (!room || !room.isParticipant(socket.userId)) return;
+        room.resetUnread(socket.userId);
+        await room.save();
+        socket.to(`room:${roomId}`).emit("messages:read", {
+          roomId,
+          userId: socket.userId,
+        });
+      } catch (err) {
+        console.error("[Socket] messages:read error:", err.message);
+      }
+    });
+
+    // ── Disconnect ───────────────────────────────────────────────
+    socket.on("disconnect", (reason) => {
+      const sockets = onlineUsers.get(socket.userId);
+      if (sockets) {
+        sockets.delete(socket.id);
+        if (sockets.size === 0) onlineUsers.delete(socket.userId);
+      }
+      console.log(`❌ Disconnected: ${socket.userId} — ${reason}`);
+      console.log(`👥 Online users: ${onlineUsers.size}`);
     });
   });
 
@@ -49,11 +111,20 @@ export const getIO = () => {
   return io;
 };
 
+export const isUserOnline = (userId) => onlineUsers.has(userId.toString());
+
 export const emitToUser = (userId, event, data) => {
   try {
     getIO().to(`user:${userId.toString()}`).emit(event, data);
-    console.log(`Sending event ${event} to user ${userId}, data ${data}`);
   } catch (err) {
-    console.warn(`[Socket] Could not emit to user ${userId}:`, err.message);
+    console.warn(`[Socket] emitToUser failed for ${userId}:`, err.message);
+  }
+};
+
+export const emitToRoom = (roomId, event, data) => {
+  try {
+    getIO().to(`room:${roomId.toString()}`).emit(event, data);
+  } catch (err) {
+    console.warn(`[Socket] emitToRoom failed for ${roomId}:`, err.message);
   }
 };

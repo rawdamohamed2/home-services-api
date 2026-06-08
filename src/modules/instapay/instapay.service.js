@@ -92,7 +92,7 @@ export const adminApproveInstapayPayment = async (paymentId, adminId) => {
 
   await Booking.findByIdAndUpdate(payment.booking, { status: "in-progress" });
 
-  // تحويل الأرباح لمحفظة الـ worker
+
   const wallet = await getWorkerWalletByProfileId(payment.worker);
   await wallet.credit(payment.workerEarnings, {
     source: "booking_payment",

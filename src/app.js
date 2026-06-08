@@ -24,6 +24,8 @@ import walletRouter          from "./modules/wallet/wallet.route.js";
 import withdrawalAdminRouter from "./modules/withdrawals/withdrawalAdmin.route.js";
 import instapayRouter        from "./modules/instapay/instapay.route.js";
 import adminPaymentRouter    from "./modules/adminPayments/adminPayment.route.js";
+import subscriptionRouter      from "./modules/subscriptions/subscription.route.js";
+import subscriptionAdminRouter from "./modules/subscriptions/subscriptionAdmin.route.js";
 
 const app = express();
 const httpServer = createServer(app);
@@ -56,6 +58,8 @@ app.use("/api/wallet",                      walletRouter);
 app.use("/api/admin/payments/withdrawals",  withdrawalAdminRouter);
 app.use("/api/admin/payments/instapay",     instapayRouter);
 app.use("/api/admin/payments",              adminPaymentRouter);
+app.use("/api/subscriptions",       subscriptionRouter);
+app.use("/api/admin/subscriptions", subscriptionAdminRouter);
 
 app.get("/", (req, res) => {
   res.status(200).json({

@@ -54,10 +54,5 @@ router.get(
   "/users",
   subscriptionController.adminGetAllSubscriptions
 );
-router.patch(
-  "/:id/status",
-  validate(updateStatusSchema),
-  subscriptionController.adminUpdateSubscriptionStatus
-);
 
 export default router;

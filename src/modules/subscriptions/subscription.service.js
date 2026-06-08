@@ -1,6 +1,6 @@
 import SubscriptionPlan from "./SubscriptionPlan.model.js";
 import UserSubscription from "./UserSubscription.model.js";
-import PaymentMethod from "../payments/PaymentMethod.model.js";
+import PaymentMethod from "../payments/paymentMethod.model.js";
 
 //  USER — Plans
 

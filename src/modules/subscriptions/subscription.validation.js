@@ -49,15 +49,7 @@ export const addFeatureSchema = Joi.object({
   }),
 });
 
-//  Admin: Update Subscription Status 
-export const updateStatusSchema = Joi.object({
-  status: Joi.string()
-    .valid("active", "cancelled", "expired")
-    .required()
-    .messages({
-      "any.only": "Status must be active, cancelled, or expired",
-    }),
-});
+
 
 //  Middleware 
 export const validate = (schema, source = "body") =>

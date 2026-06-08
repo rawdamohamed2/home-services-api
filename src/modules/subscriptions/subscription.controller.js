@@ -130,12 +130,4 @@ export const adminGetAllSubscriptions = async (req, res, next) => {
   } catch (error) { next(error); }
 };
 
-export const adminUpdateSubscriptionStatus = async (req, res, next) => {
-  try {
-    const subscription = await subscriptionService.adminUpdateSubscriptionStatus(
-      req.params.id,
-      req.body.status
-    );
-    return ApiResponse.success(res, subscription, "Subscription status updated");
-  } catch (error) { next(error); }
-};
+

@@ -254,13 +254,3 @@ export const adminGetAllSubscriptions = async (query = {}) => {
   };
 };
 
-export const adminUpdateSubscriptionStatus = async (subscriptionId, status) => {
-  const subscription = await UserSubscription.findById(subscriptionId);
-  if (!subscription) throw new Error("Subscription not found");
-
-  subscription.status = status;
-  if (status === "cancelled") subscription.cancelledAt = new Date();
-  await subscription.save();
-
-  return subscription;
-};

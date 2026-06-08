@@ -19,7 +19,7 @@ import roleRoutes from "./modules/rolePermissions/rolePermission.route.js";
 import bookingRoutes from "./modules/bookings/booking.route.js";
 import notificationsRoutes from "./modules/notifications/Notification.routes.js";
 import assignmentsRoutes from "./modules/bookingAssignment/bookingAssignment.route.js";
-import ChatRoutes from "./modules/chats/Chat.route.js";
+import ChatRoutes from "./modules/chats/chat.route.js";
 
 const app = express();
 const httpServer = createServer(app);

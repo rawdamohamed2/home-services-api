@@ -121,13 +121,5 @@ export const adminRemoveFeature = async (req, res, next) => {
   } catch (error) { next(error); }
 };
 
-//  ADMIN — User Subscriptions
-
-export const adminGetAllSubscriptions = async (req, res, next) => {
-  try {
-    const data = await subscriptionService.adminGetAllSubscriptions(req.query);
-    return ApiResponse.success(res, data);
-  } catch (error) { next(error); }
-};
 
 

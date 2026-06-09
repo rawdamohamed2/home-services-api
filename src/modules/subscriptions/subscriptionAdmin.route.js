@@ -48,10 +48,5 @@ router.delete(
   subscriptionController.adminRemoveFeature
 );
 
-//  User Subscriptions 
-router.get(
-  "/users",
-  subscriptionController.adminGetAllSubscriptions
-);
 
 export default router;

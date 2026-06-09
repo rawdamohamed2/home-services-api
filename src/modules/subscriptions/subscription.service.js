@@ -229,28 +229,3 @@ export const adminRemoveFeature = async (planId, featureIndex) => {
   return plan;
 };
 
-//  ADMIN — User Subscriptions
-
-export const adminGetAllSubscriptions = async (query = {}) => {
-  const { page = 1, limit = 10, status, planId } = query;
-  const filter = {};
-
-  if (status) filter.status = status;
-  if (planId) filter.plan = planId;
-
-  const [subscriptions, total] = await Promise.all([
-    UserSubscription.find(filter)
-      .populate("user", "firstName lastName email phone")
-      .populate("plan", "name price finalPrice")
-      .sort({ createdAt: -1 })
-      .skip((page - 1) * limit)
-      .limit(Number(limit)),
-    UserSubscription.countDocuments(filter),
-  ]);
-
-  return {
-    subscriptions,
-    pagination: { total, page: Number(page), pages: Math.ceil(total / limit) },
-  };
-};
-

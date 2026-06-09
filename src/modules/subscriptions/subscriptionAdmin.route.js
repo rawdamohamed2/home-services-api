@@ -19,8 +19,8 @@ router.get(
   subscriptionController.adminGetAllPlans
 );
 router.get(
-  "/plans/:id",
-  subscriptionController.adminGetPlanById
+  "/plans/:name",
+   subscriptionController.adminGetPlanByName
 );
 router.post(
   "/plans",

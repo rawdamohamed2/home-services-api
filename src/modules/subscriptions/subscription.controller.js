@@ -74,9 +74,10 @@ export const adminGetAllPlans = async (req, res, next) => {
   } catch (error) { next(error); }
 };
 
-export const adminGetPlanById = async (req, res, next) => {
+export const adminGetPlanByName = async (req, res, next) => {
   try {
-    const plan = await subscriptionService.adminGetPlanById(req.params.id);
+    const { name } = req.params;
+    const plan = await subscriptionService.adminGetPlanByName(name);
     return ApiResponse.success(res, plan);
   } catch (error) { next(error); }
 };

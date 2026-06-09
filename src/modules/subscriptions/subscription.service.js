@@ -171,8 +171,10 @@ export const adminGetAllPlans = async (query = {}) => {
   };
 };
 
-export const adminGetPlanById = async (planId) => {
-  const plan = await SubscriptionPlan.findById(planId);
+export const adminGetPlanByName = async (planName) => {
+  const plan = await SubscriptionPlan.findOne({ 
+    name: { $regex: new RegExp(`^${planName}$`, 'i') } 
+  });
   if (!plan) throw new Error("Plan not found");
   return plan;
 };

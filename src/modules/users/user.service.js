@@ -1,5 +1,5 @@
 import User from './user.model.js';
-import Wallet from '../payments/Wallet.model.js';
+import Wallet from '../wallet/Wallet.model.js';
 import WorkerProfile from '../workers/WorkerProfile.model.js';
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';

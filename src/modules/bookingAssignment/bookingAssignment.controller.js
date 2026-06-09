@@ -75,8 +75,10 @@ export const rejectAssignment = async (req, res) => {
 export const counterAssignment = async (req, res) => {
   try {
     const { counterPrice, note } = req.body;
+
     const assignment = await getAssignment(req.params.id);
     await assertWorkerOwns(assignment, req.user.id);
+
     const updated = await counterOffer(assignment, counterPrice, note);
 
     ApiResponse.success(

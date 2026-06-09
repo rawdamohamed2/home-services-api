@@ -38,11 +38,13 @@ const chatRoomSchema = new mongoose.Schema(
       },
     },
 
+    // للدعم الفني
     supportTicket: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "SupportTicket",
     },
 
+    // حالة المحادثة
     status: {
       type: String,
       enum: ["active", "resolved", "closed"],
@@ -65,6 +67,7 @@ const chatRoomSchema = new mongoose.Schema(
       default: new Map(),
     },
 
+    // للمحادثات مع البوت
     botContext: {
       stage: String,
       data: mongoose.Schema.Types.Mixed,
@@ -119,7 +122,7 @@ chatRoomSchema.methods.addParticipant = function (userId) {
 
 // Method للتحقق من عضوية المستخدم
 chatRoomSchema.methods.isParticipant = function (userId) {
-  return this.participants.some((p) => p._id.toString() === userId.toString());
+  return this.participants.some((p) => p.toString() === userId.toString());
 };
 
 // Method لزيادة عدد الرسائل غير المقروءة (أضيفي ده)
@@ -176,6 +179,4 @@ chatRoomSchema.statics.createSupportRoom = async function (userId) {
   });
 };
 
-const ChatRoom =
-  mongoose.models.ChatRoom || mongoose.model("ChatRoom", chatRoomSchema);
-export default ChatRoom;
+module.exports = mongoose.model("ChatRoom", chatRoomSchema);

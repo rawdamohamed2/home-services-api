@@ -10,10 +10,6 @@ import {
   notifyBookingUpdated,
 } from "../notifications/Notification.service.js";
 import { fetchServiceById } from "../services/Service.service.js";
-import {
-  onBookingCancelled,
-  onBookingCompleted,
-} from "../../core/services/Bookingchat.integration.js";
 
 export const orderService = async (
   service,
@@ -233,8 +229,6 @@ export const cancelBookingById = async (id, user, reason) => {
 
     await booking.save();
 
-    await onBookingCancelled(booking);
-
     await BookingAssignment.updateMany(
       {
         booking: booking._id,
@@ -300,9 +294,6 @@ export const updateBookingStatus = async (id, status, note) => {
     booking.status = status;
     if (note) {
       booking.timeline.push({ status, timestamp: new Date(), note });
-    }
-    if (booking.status === "completed") {
-      await onBookingCompleted(booking);
     }
 
     await booking.save();

@@ -1,17 +1,16 @@
 export const EVENTS = {
-  // ── Server → Worker ───────────────────────────────────────────────
-  NEW_OFFER: "offer:new", // new booking offer arrived
-  OFFER_EXPIRED: "offer:expired", // offer window closed
-  USER_ACCEPTED: "offer:user_accepted", // user accepted counter price
-  USER_REJECTED: "offer:user_rejected", // user rejected counter price
-  BOOKING_CANCELLED: "booking:cancelled", // booking was cancelled
+  NEW_OFFER: "offer:new",
+  OFFER_EXPIRED: "offer:expired",
+  USER_ACCEPTED: "offer:user_accepted",
+  USER_REJECTED: "offer:user_rejected",
+  BOOKING_CANCELLED: "booking:cancelled",
   BOOKING_UPDATED: "booking:updated",
-  // ── Server → User ─────────────────────────────────────────────────
-  COUNTER_OFFER: "offer:counter", // worker proposed new price
-  BOOKING_ACCEPTED: "booking:accepted", // worker accepted at original price
-  BOOKING_COMPLETED: "booking:completed", // service done
-  WORKER_ASSIGNED: "booking:assigned", // final worker confirmed
 
-  // ── General ───────────────────────────────────────────────────────
-  NOTIFICATION: "notification:new", // any new DB notification
+  COUNTER_OFFER: "offer:counter",
+  BOOKING_ACCEPTED: "booking:accepted",
+  BOOKING_COMPLETED: "booking:completed",
+  WORKER_ASSIGNED: "booking:assigned",
+
+  NOTIFICATION: "notification:new",
+  NEW_MESSAGE: "message:new",
 };

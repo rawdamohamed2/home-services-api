@@ -12,10 +12,10 @@ export const startCronJobs = () => {
       const count = await BookingAssignment.expireOldAssignments();
       if (count > 0)
         console.log(
-          `[CRON] ✅ Expired ${count} assignment(s) at ${new Date().toISOString()}`,
+          `[CRON]  Expired ${count} assignment(s) at ${new Date().toISOString()}`,
         );
     } catch (err) {
-      console.error("[CRON] ❌ expire assignments:", err.message);
+      console.error("[CRON]  expire assignments:", err.message);
     }
   });
 
@@ -24,9 +24,9 @@ export const startCronJobs = () => {
     try {
       const count = await processPendingScheduled();
       if (count > 0)
-        console.log(`[CRON] 📢 Sent ${count} scheduled notification(s)`);
+        console.log(`[CRON]  Sent ${count} scheduled notification(s)`);
     } catch (err) {
-      console.error("[CRON] ❌ scheduled notifications:", err.message);
+      console.error("[CRON]  scheduled notifications:", err.message);
     }
   });
 
@@ -34,9 +34,9 @@ export const startCronJobs = () => {
     try {
       const count = await processFailedRetries();
       if (count > 0)
-        console.log(`[CRON] 🔄 Retried ${count} failed notification(s)`);
+        console.log(`[CRON]  Retried ${count} failed notification(s)`);
     } catch (err) {
-      console.error("[CRON] ❌ retry notifications:", err.message);
+      console.error("[CRON]  retry notifications:", err.message);
     }
   });
 

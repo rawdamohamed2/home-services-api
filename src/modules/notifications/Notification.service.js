@@ -65,6 +65,23 @@ const MESSAGES = {
     title: "Wallet Debited",
     body: (d) => `${d.amount} L.E deducted from your wallet.`,
   },
+  new_message: {
+    title: (d) => d.senderName,
+    body: (d) => d.messageText,
+  },
+  ticket_assigned: {
+    title: "Ticket Assigned",
+    body: (d) =>
+      `Ticket #${d.ticketCode} (${d.subject}) has been assigned to you.`,
+  },
+  ticket_resolved: {
+    title: "Ticket Resolved ",
+    body: (d) => `Your support ticket "${d.subject}" has been resolved.`,
+  },
+  ticket_closed: {
+    title: "Ticket Closed",
+    body: (d) => `Your support ticket "${d.subject}" has been closed.`,
+  },
 };
 
 const SOCKET_EVENT_MAP = {
@@ -77,6 +94,10 @@ const SOCKET_EVENT_MAP = {
   booking_completed: EVENTS.BOOKING_COMPLETED,
   booking_offer_updated: EVENTS.BOOKING_UPDATED,
   worker_assigned: EVENTS.WORKER_ASSIGNED,
+  new_message: EVENTS.NEW_MESSAGE,
+  ticket_assigned: EVENTS.NOTIFICATION,
+  ticket_resolved: EVENTS.NOTIFICATION,
+  ticket_closed: EVENTS.NOTIFICATION,
 };
 
 export const sendNotification = async (
@@ -85,51 +106,70 @@ export const sendNotification = async (
   data = {},
   messageData = {},
 ) => {
-  const template = MESSAGES[type];
-  if (!template) {
-    console.warn("[Notification] Unknown type:", type);
-    return null;
-  }
-
-  const notification = await Notification.create({
-    user: userId,
-    title: template.title,
-    type: type || "system",
-    message: template.body(messageData),
-    metadata: data,
-  });
-
-  const payload = {
-    notification: {
-      _id: notification._id,
-      title: notification.title,
-      body: notification.message,
-      type: notification.type,
-      metadata: data,
-      createdAt: notification.createdAt,
-    },
-    ...data,
-  };
-
-  const socketEvent = SOCKET_EVENT_MAP[type] || EVENTS.NOTIFICATION;
-  emitToUser(userId, socketEvent, payload);
-
-  const User = mongoose.model("User");
-  const user = await User.findById(userId).select("fcmToken").lean();
-
-  if (user?.fcmToken) {
-    const fcmResult = await sendFCM(user.fcmToken, {
-      title: template.title,
-      body: template.body(messageData),
-      data: { type, notificationId: notification._id.toString(), ...data },
-    });
-
-    if (fcmResult?.invalidToken) {
-      await User.findByIdAndUpdate(userId, { $unset: { fcmToken: 1 } });
+  try {
+    const template = MESSAGES[type];
+    if (!template) {
+      console.warn("[Notification] Unknown type:", type);
+      return null;
     }
-  }
+    console.log(type);
+    const title =
+      typeof template.title === "function"
+        ? template.title(messageData)
+        : template.title;
 
-  return notification;
+    const body = template.body(messageData);
+
+    const notification = await Notification.create({
+      user: userId,
+      title,
+      type,
+      message: body,
+      metadata: data,
+    });
+    console.log(notification);
+    // 2. بعت socket real-time
+    const socketEvent = SOCKET_EVENT_MAP[type] || EVENTS.NOTIFICATION;
+
+    emitToUser(userId, socketEvent, {
+      notification: {
+        _id: notification._id,
+        title,
+        body,
+        type,
+        metadata: data,
+        createdAt: notification.createdAt,
+      },
+      ...data,
+    });
+    console.log(socketEvent);
+    // 3. بعت FCM لو الـ user offline
+    const User = mongoose.model("User");
+    const user = await User.findById(userId).select("fcmToken").lean();
+
+    if (user?.fcmToken) {
+      const fcmResult = await sendFCM(user.fcmToken, {
+        title,
+        body,
+        data: {
+          type,
+          notificationId: notification._id.toString(),
+          ...Object.fromEntries(
+            Object.entries(data).map(([k, v]) => [k, String(v)]),
+          ),
+        },
+      });
+
+      if (fcmResult?.invalidToken) {
+        await User.findByIdAndUpdate(userId, { $unset: { fcmToken: 1 } });
+      }
+    }
+
+    return notification;
+  } catch (error) {
+    console.log(error.message);
+    return error.message;
+  }
 };
 
 export const notifyBookingCreated = (u, d, m) =>
@@ -152,3 +192,11 @@ export const notifyWorkerAssigned = (u, d, m) =>
   sendNotification(u, "worker_assigned", d, m);
 export const notifyBookingUpdated = (u, d, m) =>
   sendNotification(u, "booking_offer_updated", d, m);
+export const notifyNewMessage = (u, d, m) =>
+  sendNotification(u, "new_message", d, m);
+export const notifyTicketAssigned = (u, d, m) =>
+  sendNotification(u, "ticket_assigned", d, m);
+export const notifyTicketResolved = (u, d, m) =>
+  sendNotification(u, "ticket_resolved", d, m);
+export const notifyTicketClosed = (u, d, m) =>
+  sendNotification(u, "ticket_closed", d, m);

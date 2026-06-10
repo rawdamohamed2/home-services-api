@@ -9,6 +9,7 @@ import {
   notifyWorkerAssigned,
 } from "../notifications/Notification.service.js";
 import WorkerProfile from "../workers/WorkerProfile.model.js";
+import { onBookingAccepted } from "../../core/services/Bookingchat.integration.js";
 
 export const getAssignment = async (id) => {
   const assignment = await BookingAssignment.findById(id);
@@ -60,6 +61,8 @@ export const acceptOffer = async (assignment) => {
           select: "firstName lastName phone profileImage email",
         },
       });
+
+    await onBookingAccepted(booking);
 
     await notifyBookingAccepted(
       booking.user._id,
@@ -114,7 +117,7 @@ export const counterOffer = async (assignment, counterPrice, note) => {
     await assignment.counter(counterPrice, note);
 
     const booking = await Booking.findById(assignment.booking)
-      .populate("user", "_id")
+      .populate("user", "_id firstName lastName")
       .populate("service", "name");
 
     const Assignment = await assignment.populate({
@@ -126,6 +129,7 @@ export const counterOffer = async (assignment, counterPrice, note) => {
         select: "firstName lastName phone profileImage email",
       },
     });
+
     await notifyCounterOffer(
       booking.user._id,
       {
@@ -136,7 +140,7 @@ export const counterOffer = async (assignment, counterPrice, note) => {
         service_name: booking.service.name,
         customer_name: `${booking.user.firstName} ${booking.user.lastName}`,
         worker_id: assignment.worker,
-        worker_name: `${booking.worker.user.firstName} ${booking.worker.user.lastName}`,
+        worker_name: `${Assignment.worker.user.firstName} ${Assignment.worker.user.lastName}`,
         status: booking.status,
         scheduled_date: booking.scheduledDate,
       },

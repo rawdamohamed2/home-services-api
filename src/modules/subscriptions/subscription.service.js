@@ -98,11 +98,9 @@ export const cancelSubscription = async (userId, subscriptionId) => {
   if (!subscription) throw new Error("Subscription not found");
   if (!subscription.canCancel()) throw new Error("Subscription is not active");
 
-  subscription.status = "cancelled";
-  subscription.cancelledAt = new Date();
-  await subscription.save();
+  await UserSubscription.findByIdAndDelete(subscriptionId);
 
-  return subscription;
+  return { message: "Subscription cancelled successfully", deletedId: subscriptionId };
 };
 
 //  USER — Renew
@@ -119,7 +117,6 @@ export const renewSubscription = async (userId, subscriptionId) => {
   const plan = subscription.plan;
   if (!plan.isActive) throw new Error("This plan is no longer available");
 
-  // تأكد من الـ payment method لسه موجود
   const paymentMethod = await PaymentMethod.findOne({
     _id: subscription.paymentMethod,
     owner: userId,

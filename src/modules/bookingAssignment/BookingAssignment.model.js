@@ -39,18 +39,17 @@ const bookingAssignmentSchema = new mongoose.Schema(
 
     expiryTime: {
       type: Date,
-      default: () => new Date(Date.now() + 100 * 60 * 1000),
+      default: () => new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
     },
 
     responseNote: String,
 
-    // ── Negotiation fields ──────────────────────────────────────────────────
-    originalPrice: { type: Number, default: null }, // سعر الـ booking وقت الإرسال
-    counterPrice: { type: Number, default: null }, // السعر اللي اقترحه الـ worker
-    counterNote: { type: String, default: null }, // ملاحظة الـ worker على السعر
-    finalPrice: { type: Number, default: null }, // السعر المتفق عليه في النهاية
+    originalPrice: { type: Number, default: null },
+    counterPrice: { type: Number, default: null },
+    counterNote: { type: String, default: null },
+    finalPrice: { type: Number, default: null },
 
-    userRespondedAt: Date, // وقت رد الـ user على الـ counter
+    userRespondedAt: Date,
 
     priority: { type: Number, default: 1, min: 1, max: 3 },
     assignmentOrder: { type: Number, default: 1 },
@@ -143,13 +142,11 @@ bookingAssignmentSchema.methods.counter = async function (counterPrice, note) {
   if (!counterPrice || counterPrice <= 0) {
     throw new Error("counterPrice must be a positive number");
   }
-
   this.status = "countered";
   this.counterPrice = counterPrice;
   this.counterNote = note || null;
   this.respondedAt = new Date();
-  // Give user 30 min to respond to the counter
-  this.expiryTime = new Date(Date.now() + 100 * 60 * 1000);
+  this.expiryTime = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000);
   await this.save();
 
   return this;
@@ -207,7 +204,7 @@ bookingAssignmentSchema.methods.userReject = async function () {
 // ── Statics ───────────────────────────────────────────────────────────────────
 bookingAssignmentSchema.statics.sendToWorkers = async function (
   bookingId,
-  workers, // [{ workerId, originalPrice }]  أو  [workerId] للـ backward compat
+  workers,
   priority = 1,
 ) {
   const assignments = workers.map((w, index) => {

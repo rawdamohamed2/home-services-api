@@ -30,19 +30,21 @@ export const registerUser = async (req, res) => {
   const session = await mongoose.startSession();
   try {
     session.startTransaction();
+
     const { email, phone } = req.body;
     await checkExistingUser(email, phone);
+
     const user = await createBaseAccount(req.body, "user", session);
     const { token, refreshToken } = await prepareAuthData(user);
+
     user.refreshToken = refreshToken;
-    await user.save({ validateBeforeSave: false });
+    await user.save({ session, validateBeforeSave: false });
 
     await session.commitTransaction();
-
-    return sendAuthResponse(res, user, token, "user created successfully");
+    return sendAuthResponse(res, user, token, "User created successfully");
   } catch (error) {
     await session.abortTransaction();
-    return ApiResponse.error(res, error.message);
+    errorHandler(error, req, res);
   } finally {
     await session.endSession();
   }
@@ -52,6 +54,7 @@ export const registerWorker = async (req, res) => {
   const session = await mongoose.startSession();
   try {
     session.startTransaction();
+
     const {
       firstName,
       lastName,
@@ -63,27 +66,33 @@ export const registerWorker = async (req, res) => {
       profileImage,
       ...otherData
     } = req.body;
+
     await checkExistingUser(email, phone);
 
-    const userData = {
-      firstName,
-      lastName,
-      email,
-      password,
-      phone,
-      enabledLocation,
-      location,
-      profileImage,
-      role: "worker",
-    };
-    const user = await createBaseAccount(userData, "worker", session);
+    // ✅ session بتتمرر صح دلوقتي
+    const user = await createBaseAccount(
+      {
+        firstName,
+        lastName,
+        email,
+        password,
+        phone,
+        enabledLocation,
+        location,
+        profileImage,
+      },
+      "worker",
+      session,
+    );
 
-    const workerData = { user: user._id, ...otherData };
-    const worker = await createWorkerAccount(workerData, session);
+    const worker = await createWorkerAccount(
+      { user: user._id, ...otherData },
+      session,
+    );
 
     const { token, refreshToken } = await prepareAuthData(user);
     user.refreshToken = refreshToken;
-    await user.save({ validateBeforeSave: false });
+    await user.save({ session, validateBeforeSave: false });
 
     await session.commitTransaction();
     return sendAuthResponse(
@@ -94,7 +103,7 @@ export const registerWorker = async (req, res) => {
     );
   } catch (error) {
     await session.abortTransaction();
-    return ApiResponse.validationError(res, error.message);
+    errorHandler(error, req, res);
   } finally {
     await session.endSession();
   }
@@ -119,7 +128,7 @@ export const login = async (req, res) => {
 
     return sendAuthResponse(res, user, token, "user Login successfully");
   } catch (error) {
-    return ApiResponse.error(res, error.message);
+    errorHandler(error, req, res);
   }
 };
 
@@ -155,7 +164,7 @@ export const sendVerifyOtp = async (req, res) => {
       "Verify Otp sent successfully to your email",
     );
   } catch (error) {
-    return ApiResponse.error(res, error.message);
+    errorHandler(error, req, res);
   }
 };
 
@@ -175,7 +184,7 @@ export const verifyEmail = async (req, res) => {
       "Your Account has been verified",
     );
   } catch (error) {
-    return ApiResponse.error(res, error.message);
+    errorHandler(error, req, res);
   }
 };
 
@@ -193,7 +202,7 @@ export const sendResetOtp = async (req, res) => {
       "OTP Send successfully to your email",
     );
   } catch (error) {
-    return ApiResponse.error(res, error.message);
+    errorHandler(error, req, res);
   }
 };
 
@@ -201,7 +210,7 @@ export const isAuthenticated = async (req, res) => {
   try {
     return ApiResponse.success(res, null, "User Authenticated Successfully");
   } catch (error) {
-    return ApiResponse.error(res, error.message);
+    errorHandler(error, req, res);
   }
 };
 
@@ -218,7 +227,7 @@ export const verifyResetOtp = async (req, res) => {
       "OTP verified successfully",
     );
   } catch (error) {
-    return ApiResponse.error(res, error.message);
+    errorHandler(error, req, res);
   }
 };
 
@@ -230,7 +239,7 @@ export const resetPassword = async (req, res) => {
 
     return ApiResponse.success(res, null, "Password reset successfully");
   } catch (error) {
-    return ApiResponse.error(res, error.message);
+    errorHandler(error, req, res);
   }
 };
 
@@ -238,22 +247,17 @@ export const refreshAccessToken = async (req, res) => {
   try {
     const { refreshToken } = req.body;
 
-    // 1. لو مفيش توكن مبعوت
     if (!refreshToken) {
       throw new AppError("Refresh token is required", 401);
     }
 
-    // 2. فك التشفير بتاع الـ Refresh Token
     const decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
 
-    // 3. ندور على اليوزر ونتأكد إن التوكن ده هو اللي متسجل في الداتا بيز
-    // (عشان لو كان عمل Logout أو مسحنا التوكن بتاعه ميقدرش يجدد)
     const user = await User.findById(decoded.id);
     if (!user || user.refreshToken !== refreshToken) {
       throw new AppError("Invalid refresh token. Please login again.", 403);
     }
 
-    // 4. نطلع له Access Token جديد (وممكن نطلعله Refresh جديد كمان بس خلينا في الأسهل دلوقتي)
     const accessToken = jwt.sign(
       { id: user._id, role: user.role },
       process.env.JWT_SECRET,
@@ -266,10 +270,6 @@ export const refreshAccessToken = async (req, res) => {
       "Token refreshed successfully",
     );
   } catch (err) {
-    return ApiResponse.error(
-      res,
-      "Refresh token expired or invalid. Please login again.",
-      403,
-    );
+    errorHandler(err, req, res);
   }
 };

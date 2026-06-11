@@ -188,7 +188,7 @@ export const getWorkerById = async (req, res) => {
       "Worker profile fetched successfully",
     );
   } catch (error) {
-    rerrorHandler(error, req, res);
+    errorHandler(error, req, res);
   }
 };
 

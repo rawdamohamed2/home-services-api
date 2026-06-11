@@ -7,25 +7,33 @@ import { normalizePhone } from "../../core/utils/normalizePhone.js";
 import mongoose from "mongoose";
 
 export const checkExistingUser = async (email, phone) => {
-  const existing = await User.findOne({ $or: [{ email }, { phone }] });
-  if (existing) throw new Error("User already exists with this email or phone");
-  return false;
+  try {
+    const query = [];
+    if (phone) query.push({ phone: normalizePhone(phone) });
+    if (email) query.push({ email });
+    if (!query.length) return false;
+
+    const existing = await User.findOne({ $or: query });
+    if (existing)
+      throw new Error("User already exists with this email or phone");
+    return false;
+  } catch (e) {
+    throw e;
+  }
 };
 
-export const createBaseAccount = async (userData, role) => {
+export const createBaseAccount = async (userData, role, session) => {
   try {
     const normalizedPhone = normalizePhone(userData.phone);
-    const user = new User({
-      ...userData,
-      phone: normalizedPhone,
-      role,
-    });
-    await user.save();
-    await Wallet.create({ owner: user._id });
+
+    const user = new User({ ...userData, phone: normalizedPhone, role });
+
+    await user.save({ session });
+    await Wallet.create([{ owner: user._id }], { session });
 
     return user;
-  } catch (err) {
-    throw err;
+  } catch (e) {
+    throw e;
   }
 };
 
@@ -49,12 +57,9 @@ export const prepareAuthData = async (user, login) => {
   return { token, refreshToken };
 };
 
-export const createWorkerAccount = async (workerData) => {
-  const worker = new Worker({
-    ...workerData,
-  });
-  await worker.save();
-
+export const createWorkerAccount = async (workerData, session) => {
+  const worker = new Worker({ ...workerData });
+  await worker.save({ session });
   return worker;
 };
 

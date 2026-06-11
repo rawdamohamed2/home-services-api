@@ -125,3 +125,6 @@ export const StatusBookingValidation = IdBookingValidation.keys({
     })
     .required(),
 });
+export const BookingCompletedSchema = Joi.object({
+  bookingId: objectIdRule.required(),
+}).unknown(false);

@@ -8,6 +8,7 @@ import {
   orderService,
   updateBooking,
   updateBookingStatus,
+  markBookingComplete,
 } from "./booking.service.js";
 import ApiResponse from "../../core/utils/ApiResponse.js";
 
@@ -130,29 +131,31 @@ export const getBookingTimeline = async (req, res) => {
 
 export const getBookings = async (req, res) => {
   try {
-    const {
-      status,
-      page = 1,
-      limit = 10,
-      sort = "-createdAt",
-      id,
-      dateFrom,
-      dateTo,
-    } = req.query;
+    const data = req.query;
     const user = req.user;
-    console.log(user);
-    const { bookings, total } = await fetchBookings(
-      status,
-      page,
-      limit,
-      sort,
-      user,
-      id,
-      dateFrom,
-      dateTo,
+    const { bookings, total } = await fetchBookings(data, user);
+    ApiResponse.sendPaginated(
+      res,
+      bookings,
+      total,
+      bookings.page,
+      bookings.limit,
     );
-    ApiResponse.sendPaginated(res, bookings, total, page, limit);
   } catch (err) {
     errorHandler(err, req, res);
+  }
+};
+
+export const completeBooking = async (req, res) => {
+  try {
+    const booking = await markBookingComplete(
+      req.params.bookingId,
+      req.user._id,
+    );
+    return ApiResponse.success(res, booking, "Booking marked as completed");
+  } catch (err) {
+    if (err.isOperational)
+      return ApiResponse.error(res, err.message, err.statusCode);
+    return ApiResponse.handleMongooseError(res, err);
   }
 };

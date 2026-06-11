@@ -126,3 +126,63 @@ export const workerBookingSchema = Joi.object({
 export const workerCompletedSchema = Joi.object({
   id: objectIdRule.required(),
 }).unknown(false);
+
+export const workerUpdatedSchema = Joi.object({
+  workerId: objectIdRule.required(),
+  clientInfo: {
+    firstName: Joi.string().trim().min(3).max(50).messages({
+      "string.empty": "The firstName can't be empty",
+      "string.min": "First name must be at least 3 characters",
+      "string.max": "First name cannot exceed 50 characters",
+    }),
+    lastName: Joi.string().trim().min(3).max(50).messages({
+      "string.empty": "The lastName can't be empty",
+      "string.min": "Last name must be at least 3 characters",
+      "string.max": "Last name cannot exceed 50 characters",
+    }),
+    email: Joi.string()
+      .email({ minDomainSegments: 2, tlds: { allow: ["com", "net"] } })
+      .messages({
+        "string.empty": "The email can't be empty",
+        "string.email": "Please enter a valid email",
+      }),
+    phone: Joi.string().pattern(phoneRegex).messages({
+      "string.pattern.base": "Please enter a valid phone number",
+    }),
+  },
+  workerInfo: {
+    availability: Joi.array().items(
+      Joi.object({
+        day: Joi.string()
+          .valid(...validDays)
+          .required()
+          .messages({
+            "any.required": "day is required",
+          }),
+        from: Joi.string().pattern(timeRegex).required().messages({
+          "any.required": "from is required",
+        }),
+        to: Joi.string().pattern(timeRegex).required().messages({
+          "any.required": "to is required",
+        }),
+        isAvailable: Joi.boolean().required().messages({
+          "any.required": "isAvailable is required",
+        }),
+      }),
+    ),
+    city: Joi.string(),
+    approvalStatus: Joi.string()
+      .valid("pending", "approved", " Suspended", "rejected")
+      .required(),
+    categories: Joi.array()
+      .items(Joi.string().hex().length(24))
+      .min(1)
+      .messages({
+        "array.min": "At least one category is required",
+      }),
+    memberSince: Joi.date().iso().max("now").required().messages({
+      "date.iso": "memberSince must be a valid ISO 8601 date string",
+      "date.max": "memberSince cannot be a future date",
+    }),
+  },
+}).unknown(false);

@@ -10,10 +10,12 @@ import {
   editBookingStatus,
   getNearbyBookings,
   getBookingTimeline,
+  completeBooking,
 } from "./booking.controller.js";
-import { authorize, isStaff } from "../../core/middleware/roleMiddleware.js";
+import { authorize } from "../../core/middleware/roleMiddleware.js";
 import { validate } from "../../core/middleware/validate.js";
 import {
+  BookingCompletedSchema,
   cancelBookingValidation,
   createBookingValidation,
   IdBookingValidation,
@@ -68,6 +70,14 @@ bookingRouter.get(
   checkPermissionAndRole("user", "manage_bookings"),
   validate(IdBookingValidation),
   getBookingTimeline,
+);
+
+bookingRouter.patch(
+  "/:bookingId/complete",
+  validate(BookingCompletedSchema),
+  protect,
+  //checkPermissionAndRole("manage_bookings"),
+  completeBooking,
 );
 
 bookingRouter.patch(

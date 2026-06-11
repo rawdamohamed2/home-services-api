@@ -1,6 +1,8 @@
 import { Server } from "socket.io";
 import jwt from "jsonwebtoken";
 import ChatRoom from "../modules/chats/ChatRoom.model.js";
+import * as trackingService from "../modules/Tracking system/tracking.service.js";
+import Booking from "../modules/bookings/Booking.model.js";
 
 let io;
 const onlineUsers = new Map();
@@ -97,8 +99,38 @@ export const initSocket = (httpServer) => {
         sockets.delete(socket.id);
         if (sockets.size === 0) onlineUsers.delete(socket.userId);
       }
-      console.log(`❌ Disconnected: ${socket.userId} — ${reason}`);
-      console.log(`👥 Online users: ${onlineUsers.size}`);
+      console.log(` Disconnected: ${socket.userId} — ${reason}`);
+      console.log(` Online users: ${onlineUsers.size}`);
+    });
+
+    socket.on("worker:update_location", async ({ longitude, latitude }) => {
+      try {
+        if (socket.role !== "worker") return;
+        await trackingService.updateWorkerLocation(socket.userId, {
+          longitude: Number(longitude),
+          latitude: Number(latitude),
+        });
+      } catch (err) {
+        console.error("[Socket] worker:update_location error:", err.message);
+      }
+    });
+
+    socket.on("tracking:subscribe", async ({ workerId }) => {
+      try {
+        const booking = await Booking.findOne({
+          user: socket.userId,
+          worker: workerId,
+          status: { $in: ["accepted", "in_progress"] },
+        });
+        if (!booking) return;
+        socket.join(`tracking:${workerId}`);
+      } catch (err) {
+        console.error("[Socket] tracking:subscribe error:", err.message);
+      }
+    });
+
+    socket.on("tracking:unsubscribe", ({ workerId }) => {
+      socket.leave(`tracking:${workerId}`);
     });
   });
 

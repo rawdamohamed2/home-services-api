@@ -6,6 +6,7 @@ import { dispatchBooking } from "../../core/utils/Dispatchservice.js";
 import { getUserProfile } from "../users/user.service.js";
 import {
   notifyBookingCancelled,
+  notifyBookingCompleted,
   notifyBookingCreated,
   notifyBookingUpdated,
 } from "../notifications/Notification.service.js";
@@ -14,6 +15,8 @@ import {
   onBookingCancelled,
   onBookingCompleted,
 } from "../../core/services/Bookingchat.integration.js";
+import WorkerProfile from "../workers/WorkerProfile.model.js";
+import Payment from "../payments/Payment.model.js";
 
 export const orderService = async (
   service,
@@ -65,14 +68,16 @@ export const orderService = async (
 };
 
 export const fetchBookings = async (
-  status,
-  page = 1,
-  limit = 5,
-  sort = "-createdAt",
+  {
+    status = null,
+    page = 1,
+    limit = 5,
+    sort = "-createdAt",
+    id = null,
+    dateFrom = null,
+    dateTo = null,
+  },
   user,
-  id,
-  dateFrom,
-  dateTo,
 ) => {
   try {
     const filter = {};
@@ -99,6 +104,7 @@ export const fetchBookings = async (
 
     const [bookings, total] = await Promise.all([
       Booking.find(filter)
+        .select("status scheduledDate")
         .populate("service", "name category")
         .populate("user", "firstName lastName phone profileImage email")
         .populate({
@@ -131,24 +137,105 @@ export const fetchBooking = async (bookingId) => {
   try {
     const booking = await Booking.findById(bookingId)
       .populate("service", "name category")
-      .populate(
-        "user",
-        "firstName lastName  phone email profileImage address location rating",
-      )
+      .populate("user", "firstName lastName  phone email profileImage location")
       .populate({
         path: "worker",
-        select:
-          "nationalIdFront nationalIdBack licenseImage availabilityStatus bio categories",
+        select: "availabilityStatus",
         populate: {
           path: "user",
           select: "firstName lastName phone profileImage email",
         },
       });
+    const PaymentBooking = await getPaymentBooking();
 
     if (!booking) throw new NotFoundError("Booking");
-    return booking;
+    if (!PaymentBooking) {
+      const payment = {
+        amount: booking.totalAmount,
+        status: "Unpaid",
+        method: "cash",
+      };
+      return { payment, booking };
+    }
+    return { PaymentBooking, booking };
   } catch (err) {
     throw err.message;
+  }
+};
+
+export const getPaymentBooking = async (bookingId) => {
+  try {
+    const payment = await Payment.findOne({
+      booking: bookingId,
+    }).sort({ isDefault: -1, createdAt: -1 });
+    if (!payment) return null;
+    return payment;
+  } catch (err) {
+    throw err;
+  }
+};
+
+export const markBookingComplete = async (bookingId) => {
+  const session = await mongoose.startSession();
+
+  try {
+    session.startTransaction();
+
+    const booking = await Booking.findById(bookingId)
+      .populate("service", "name")
+      .populate("worker", "user")
+      .session(session);
+
+    if (!booking) throw new NotFoundError("Booking");
+
+    if (!["accepted", "in-progress"].includes(booking.status))
+      throw new AppError(
+        `Cannot complete a booking with status "${booking.status}"`,
+        400,
+      );
+
+    booking.status = "completed";
+    booking.timeline.push({
+      status: "completed",
+      timestamp: new Date(),
+      note: `Marked as completed by admin`,
+    });
+
+    await booking.save({ session });
+
+    await WorkerProfile.findOneAndUpdate(
+      { user: booking.worker?.user || booking.worker },
+      { $inc: { completedJobs: 1 } },
+      { session },
+    );
+
+    await session.commitTransaction();
+
+    const serviceName = booking.service?.name || "your service";
+    const workerId = booking.worker?.user || booking.worker;
+
+    await Promise.allSettled([
+      onBookingCompleted(booking),
+
+      notifyBookingCompleted(
+        booking.user,
+        { bookingId: booking._id.toString() },
+        { serviceName },
+      ),
+
+      notifyBookingCompleted(
+        workerId,
+        { bookingId: booking._id.toString() },
+        { serviceName },
+      ),
+    ]);
+
+    return booking;
+  } catch (err) {
+    await session.abortTransaction();
+    throw err;
+  } finally {
+    await session.endSession();
   }
 };
 

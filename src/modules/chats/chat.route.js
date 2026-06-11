@@ -37,7 +37,7 @@ router.use(protect);
 // PATCH  /chat/rooms/:roomId/close    → close room [admin/support]
 
 router.get("/rooms", roomCtrl.getMyRooms);
-//router.get("/rooms/bot", roomCtrl.getBotRoom);
+router.get("/rooms/bot", roomCtrl.getBotRoom);
 //router.get("/rooms/support", roomCtrl.getSupportRoom);
 router.get("/rooms/:roomId", validate(roomIdValidation), roomCtrl.getRoom);
 //router.patch("/rooms/:roomId/read", roomCtrl.markRoomRead);

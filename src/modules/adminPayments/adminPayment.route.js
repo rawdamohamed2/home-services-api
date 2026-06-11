@@ -24,6 +24,15 @@ const revenueSchema = Joi.object({
   }),
 });
 
+//  history with search Schema
+const historySchema = Joi.object({
+  page: Joi.number().min(1).default(1),
+  limit: Joi.number().min(1).max(50).default(5),
+  from: Joi.date().iso().optional(),
+  to: Joi.date().iso().min(Joi.ref("from")).optional(),
+  search: Joi.string().max(100).optional(),
+});
+
 // ─────────────────────────────────────────────────────────
 router.use(protect, authorize("admin", "owner"));
 
@@ -35,6 +44,7 @@ router.get(
 );
 router.get(
   "/history",
+  validate(historySchema, "query"),  
   adminPaymentController.adminGetHistory
 );
 

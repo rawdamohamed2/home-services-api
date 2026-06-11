@@ -1,6 +1,4 @@
-import WorkerProfile from "./WorkerProfile.model.js";
 import ApiResponse from "../../core/utils/ApiResponse.js";
-import User from "../users/user.model.js";
 import { sendEmail } from "../../core/utils/sendEmail.js";
 import {
   fetchAllWorkers,
@@ -13,45 +11,9 @@ import {
   updateWorkerAvailability,
   updateAvailabilityStatus,
   deleteworker,
+  editWorkerData,
 } from "./worker.service.js";
 import errorHandler from "../../core/middleware/Errorhandler.js";
-
-export const getAllWorkers = async (req, res) => {
-  try {
-    const result = await fetchAllWorkers(req.query);
-
-    return ApiResponse.success(
-      res,
-      {
-        workers: result.workers,
-        pagination: {
-          page: result.page,
-          limit: result.limit,
-          total: result.total,
-          pages: Math.ceil(result.total / result.limit),
-        },
-      },
-      "Workers fetched successfully",
-    );
-  } catch (error) {
-    return ApiResponse.error(res, error.message);
-  }
-};
-
-export const getWorkerById = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const workerProfile = await fetchWorkerById(id);
-
-    return ApiResponse.success(
-      res,
-      workerProfile,
-      "Worker profile fetched successfully",
-    );
-  } catch (error) {
-    return ApiResponse.error(res, error.message);
-  }
-};
 
 export const updateWorkerProfile = async (req, res) => {
   try {
@@ -65,7 +27,7 @@ export const updateWorkerProfile = async (req, res) => {
       "Profile updated successfully",
     );
   } catch (error) {
-    return ApiResponse.error(res, error.message);
+    errorHandler(error, req, res);
   }
 };
 
@@ -80,7 +42,7 @@ export const updateAvailability = async (req, res) => {
       "Availability updated successfully",
     );
   } catch (error) {
-    return ApiResponse.error(res, error.message);
+    errorHandler(error, req, res);
   }
 };
 
@@ -93,7 +55,7 @@ export const updateAvailability = async (req, res) => {
 //         const data = await getFullWorkerProfile(userId);
 //         return ApiResponse.success(res, data, 'Your profile fetched successfully');
 //     } catch (error) {
-//         return ApiResponse.error(res, error.message);
+//         errorHandler(error, req, res);
 //     }
 // };
 
@@ -109,7 +71,7 @@ export const updateLocation = async (req, res) => {
       "Location updated successfully",
     );
   } catch (error) {
-    return ApiResponse.error(res, error.message, 400);
+    errorHandler(error, req, res);
   }
 };
 
@@ -124,7 +86,7 @@ export const toggleStatus = async (req, res) => {
       `You are now ${updated.availabilityStatus}`,
     );
   } catch (error) {
-    return ApiResponse.error(res, error.message);
+    errorHandler(error, req, res);
   }
 };
 
@@ -133,9 +95,10 @@ export const getMyAssignments = async (req, res) => {
     const assignments = await getPendingAssignments(req.user._id);
     return ApiResponse.success(res, assignments, "Pending assignments fetched");
   } catch (error) {
-    return ApiResponse.error(res, error.message);
+    errorHandler(error, req, res);
   }
 };
+
 export const completeBooking = async (req, res) => {
   try {
     const { id } = req.params;
@@ -146,14 +109,14 @@ export const completeBooking = async (req, res) => {
     errorHandler(error, req, res);
   }
 };
-//
+
 // export const getMyBookings = async (req, res) => {
 //     try {
 //         const { status } = req.query;
 //         const bookings = await getWorkerBookings(req.user._id, status);
 //         return ApiResponse.success(res, bookings, 'Worker bookings fetched');
 //     } catch (error) {
-//         return ApiResponse.error(res, error.message);
+//         errorHandler(error, req, res);
 //     }
 // };
 
@@ -162,7 +125,7 @@ export const getMyReviews = async (req, res) => {
     const reviews = await getWorkerReviews(req.user._id);
     return ApiResponse.success(res, reviews, "Reviews fetched successfully");
   } catch (error) {
-    return ApiResponse.error(res, error.message);
+    errorHandler(error, req, res);
   }
 };
 
@@ -185,6 +148,57 @@ export const deleteMe = async (req, res) => {
       "the worker profile was deleted successfully.",
     );
   } catch (error) {
-    return ApiResponse.error(res, error.message);
+    errorHandler(error, req, res);
+  }
+};
+
+//_________________________________________
+
+export const getAllWorkers = async (req, res) => {
+  try {
+    const data = req.query;
+    const result = await fetchAllWorkers(data);
+
+    return ApiResponse.success(
+      res,
+      {
+        workers: result.workers,
+        pagination: {
+          page: result.page,
+          limit: result.limit,
+          total: result.total,
+          pages: Math.ceil(result.total / result.limit),
+        },
+      },
+      "Workers fetched successfully",
+    );
+  } catch (error) {
+    errorHandler(error, req, res);
+  }
+};
+
+export const getWorkerById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const workerProfile = await fetchWorkerById(id);
+
+    return ApiResponse.success(
+      res,
+      workerProfile,
+      "Worker profile fetched successfully",
+    );
+  } catch (error) {
+    rerrorHandler(error, req, res);
+  }
+};
+
+export const updateWorker = async (req, res) => {
+  try {
+    const { clientInfo, workerInfo } = req.body;
+    const { workerId } = req.params;
+    const worker = await editWorkerData(workerId, clientInfo, workerInfo);
+    return ApiResponse.success(res, worker, "worker updated successfully");
+  } catch (error) {
+    errorHandler(error, req, res);
   }
 };

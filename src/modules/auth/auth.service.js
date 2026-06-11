@@ -1,6 +1,6 @@
 import User from "../users/user.model.js";
 import Worker from "../workers/WorkerProfile.model.js";
-import Wallet from '../wallet/Wallet.model.js';
+import Wallet from "../wallet/Wallet.model.js";
 import { sendEmail } from "../../core/utils/sendEmail.js";
 import { generateToken } from "../../core/utils/generateToken.js";
 import { normalizePhone } from "../../core/utils/normalizePhone.js";
@@ -30,7 +30,7 @@ export const createBaseAccount = async (userData, role) => {
 };
 
 export const prepareAuthData = async (user, login) => {
-  const token = generateToken(user._id);
+  const { token, refreshToken } = generateToken(user._id, user.role);
 
   if (login) {
     await sendEmail(
@@ -46,7 +46,7 @@ export const prepareAuthData = async (user, login) => {
     );
   }
 
-  return { token };
+  return { token, refreshToken };
 };
 
 export const createWorkerAccount = async (workerData) => {

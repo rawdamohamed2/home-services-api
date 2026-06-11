@@ -57,18 +57,29 @@ export const sendMessage = async (req, res) => {
     }
 
     if (room.type === "user_bot") {
-      messageService
-        .generateBotReply(room, req.body.message)
-        .then((botMessage) => {
-          emitToUser(req.user._id, "message:new", {
-            roomId: room._id,
-            message: botMessage,
-          });
-        })
-        .catch((err) => console.error("[Bot] reply failed:", err.message));
+      try {
+        const botMessage = await messageService.generateBotReply(
+          room,
+          data.message,
+        );
+
+        emitToUser(req.user._id, "message:new", {
+          roomId: room._id,
+          message: botMessage,
+        });
+
+        return ApiResponse.success(
+          res,
+          { message, botMessage },
+          "Message sent",
+          201,
+        );
+      } catch (err) {
+        return ApiResponse.error(res, err.message);
+      }
     }
 
-    return ApiResponse.success(res, message, "Message sent", 201);
+    return ApiResponse.success(res, { message }, "Message sent", 201);
   } catch (err) {
     if (err.isOperational)
       return ApiResponse.error(res, err.message, err.statusCode);

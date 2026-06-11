@@ -27,6 +27,7 @@ import adminPaymentRouter from "./modules/adminPayments/adminPayment.route.js";
 import subscriptionRouter from "./modules/subscriptions/subscription.route.js";
 import subscriptionAdminRouter from "./modules/subscriptions/subscriptionAdmin.route.js";
 import ChatRoutes from "./modules/chats/chat.route.js";
+import TrackingRoutes from "./modules/Tracking system/tracking.routes.js";
 
 const app = express();
 const httpServer = createServer(app);
@@ -62,6 +63,7 @@ app.use("/api/admin/payments", adminPaymentRouter);
 app.use("/api/subscriptions", subscriptionRouter);
 app.use("/api/admin/subscriptions", subscriptionAdminRouter);
 app.use("/api/chat", ChatRoutes);
+app.use("/api/tracking", TrackingRoutes);
 
 app.get("/", (req, res) => {
   res.status(200).json({

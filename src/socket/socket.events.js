@@ -13,4 +13,9 @@ export const EVENTS = {
 
   NOTIFICATION: "notification:new",
   NEW_MESSAGE: "message:new",
+
+  WORKER_LOCATION: "worker:location",
+  TRACKING_SUBSCRIBE: "tracking:subscribe",
+  TRACKING_UNSUBSCRIBE: "tracking:unsubscribe",
+  WORKER_UPDATE_LOCATION: "worker:update_location",
 };

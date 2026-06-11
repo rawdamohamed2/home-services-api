@@ -3,6 +3,7 @@ import {
   isAuthenticated,
   login,
   logout,
+  refreshAccessToken,
   registerUser,
   registerWorker,
   resetPassword,
@@ -56,5 +57,5 @@ authRouter.post(
   validate(resetPasswordSchema),
   resetPassword,
 );
-
+authRouter.post("/refresh", protect, refreshAccessToken);
 export default authRouter;

@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import Wallet from "./Wallet.model.js";
 import WalletTransaction from "./WalletTransaction.model.js";
 

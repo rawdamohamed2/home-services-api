@@ -2,13 +2,15 @@ import WorkerProfile from "./WorkerProfile.model.js";
 import User from "../users/user.model.js";
 import Booking from "../bookings/Booking.model.js";
 import mongoose from "mongoose";
-import Wallet from "../wallet/Wallet.model.js";
 import BookingAssignment from "../bookingAssignment/BookingAssignment.model.js";
 import Review from "../reviews/Review.model.js";
 import Category from "../categories/Category.model.js";
 import { changeUserPassword, updateUser } from "../users/user.service.js";
-import { NotFoundError } from "../../core/utils/Errors.js";
+import { AppError, NotFoundError } from "../../core/utils/Errors.js";
 import { notifyBookingCompleted } from "../notifications/Notification.service.js";
+import { fetchBookings } from "../bookings/booking.service.js";
+import { normalizePhone } from "../../core/utils/normalizePhone.js";
+import { timeRegex, validDays } from "../../core/utils/validation.helper.js";
 
 export const getUserIdsByName = async (name) => {
   try {
@@ -33,86 +35,6 @@ export const getCategoryIdByName = async (categoryName) => {
     return categoryDoc ? categoryDoc._id : "NOT_FOUND";
   } catch (error) {
     throw new Error(error.message);
-  }
-};
-
-export const fetchAllWorkers = async (filters) => {
-  try {
-    const { page = 1, limit = 10, category, status, name, id } = filters;
-    const skip = (parseInt(page) - 1) * parseInt(limit);
-
-    const query = {};
-
-    if (id) query._id = id;
-    if (status) query.approvalStatus = status.trim();
-
-    if (category) {
-      const categoryId = await getCategoryIdByName(category);
-      if (categoryId === "NOT_FOUND") {
-        return {
-          workers: [],
-          total: 0,
-          page: parseInt(page),
-          limit: parseInt(limit),
-        };
-      }
-      query.categories = categoryId;
-    }
-
-    if (name) {
-      const userIds = await getUserIdsByName(name);
-      query.user = { $in: userIds };
-    }
-
-    const [workers, total] = await Promise.all([
-      WorkerProfile.find(query)
-        .select(
-          "bio experienceYears city approvalStatus ratingAverage availability isAvailable",
-        )
-        .populate("user", "firstName location lastName profileImage")
-        .populate({ path: "categories", select: "name" })
-        .limit(parseInt(limit))
-        .skip(skip)
-        .sort("-ratingAverage"),
-      WorkerProfile.countDocuments(query),
-    ]);
-
-    return {
-      workers,
-      total,
-      page: parseInt(page),
-      limit: parseInt(limit),
-    };
-  } catch (error) {
-    throw new Error(`Error fetching workers: ${error.message}`);
-  }
-};
-
-export const fetchWorkerById = async (id) => {
-  try {
-    const workerProfile = await WorkerProfile.findOne({
-      $or: [{ _id: id }, { user: id }],
-    })
-      .select(
-        "bio experienceYears city approvalStatus ratingAverage availability isAvailable",
-      )
-      .populate(
-        "user",
-        "firstName lastName email phone profileImage address isBlocked",
-      )
-      .populate("categories", "name");
-
-    if (!workerProfile) {
-      throw new Error("No worker profile found.");
-    }
-
-    // if (workerProfile.user && workerProfile.user.isBlocked) {
-    //     throw new Error('This worker account is currently suspended.');
-    // }
-
-    return workerProfile;
-  } catch (e) {
-    throw new Error(e.message);
   }
 };
 
@@ -150,7 +72,7 @@ export const updateWorkerFullProfile = async (userId, updateBody) => {
     return updatedWorker;
   } catch (error) {
     await session.abortTransaction();
-    throw new Error(error.message);
+    throw e;
   } finally {
     await session.endSession();
   }
@@ -204,7 +126,7 @@ export const updateGeoLocation = async (userId, lat, lng) => {
 
     return updatedUser;
   } catch (e) {
-    throw new Error(e.message);
+    throw e;
   }
 };
 
@@ -228,7 +150,7 @@ export const updateAvailabilityStatus = async (userId, status) => {
 
     return profile;
   } catch (e) {
-    throw new Error(e.message);
+    throw e;
   }
 };
 
@@ -255,7 +177,7 @@ export const getPendingAssignments = async (userId) => {
       .sort("-assignedAt");
     return pendingAssignments;
   } catch (e) {
-    throw new Error(e.message);
+    throw e;
   }
 };
 
@@ -280,7 +202,7 @@ export const getPendingAssignments = async (userId) => {
 //
 //     return Bookings;
 //   } catch (e) {
-//     throw new Error(e.message);
+//     throw e;
 //   }
 // };
 
@@ -297,7 +219,7 @@ export const getWorkerReviews = async (userId) => {
 
     return reviews;
   } catch (e) {
-    throw new Error(e.message);
+    throw e;
   }
 };
 
@@ -316,7 +238,7 @@ export const updateWorkerAvailability = async (userId, availability) => {
 
     return workerProfile;
   } catch (e) {
-    throw new Error(e.message);
+    throw e;
   }
 };
 
@@ -333,7 +255,7 @@ export const deleteworker = async (userId) => {
 
     return deletedUser;
   } catch (e) {
-    throw new Error(e.message);
+    throw e;
   }
 };
 
@@ -348,6 +270,17 @@ export const markBookingComplete = async (id, userId) => {
     if (!booking) throw new NotFoundError("Booking");
 
     booking.status = "completed";
+    booking.timeline.push({
+      status: "completed",
+      timestamp: new Date(),
+      note: `Marked as completed by admin`,
+    });
+
+    await WorkerProfile.findOneAndUpdate(
+      { user: booking.worker?.user || booking.worker },
+      { $inc: { completedJobs: 1 } },
+    );
+
     await booking.save();
 
     await notifyBookingCompleted(booking.user._id, {
@@ -364,5 +297,208 @@ export const markBookingComplete = async (id, userId) => {
     return booking;
   } catch (err) {
     throw err;
+  }
+};
+
+//-------------------------------------
+
+export const fetchAllWorkers = async (filters) => {
+  try {
+    const { page = 1, limit = 10, category, status, name, id } = filters;
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    const query = {};
+
+    if (id) query._id = id;
+    if (status) query.approvalStatus = status.trim();
+
+    if (category) {
+      const categoryId = await getCategoryIdByName(category);
+      if (categoryId === "NOT_FOUND") {
+        return {
+          workers: [],
+          total: 0,
+          page: parseInt(page),
+          limit: parseInt(limit),
+        };
+      }
+      query.categories = categoryId;
+    }
+
+    if (name) {
+      const userIds = await getUserIdsByName(name);
+      query.user = { $in: userIds };
+    }
+
+    const [workers, total] = await Promise.all([
+      WorkerProfile.find(query)
+        .select(" approvalStatus ratingAverage ")
+        .populate("user", "firstName lastName email profileImage")
+        .populate({ path: "categories", select: "name" })
+        .limit(parseInt(limit))
+        .skip(skip)
+        .sort("-ratingAverage"),
+      WorkerProfile.countDocuments(query),
+    ]);
+
+    return {
+      workers,
+      total,
+      page: parseInt(page),
+      limit: parseInt(limit),
+    };
+  } catch (error) {
+    throw e;
+  }
+};
+
+export const fetchWorkerById = async (id) => {
+  try {
+    const workerProfile = await WorkerProfile.findOne({
+      $or: [{ _id: id }, { user: id }],
+    })
+      .select(
+        " city nationalIdFront nationalIdBack availability approvalStatus completedJobs ratingAverage availability isAvailable createdAt",
+      )
+      .populate(
+        "user",
+        "firstName lastName email phone profileImage address isBlocked",
+      )
+      .populate("categories", "name");
+
+    const { bookings } = await fetchBookings({ user: workerProfile.user._id });
+
+    let bookingData = bookings.map((b) => ({
+      status: b.status,
+      price: b.totalAmount,
+      userName: `${b.user.firstName} ${b.user.lastName}`,
+      service: b.service.name,
+      scheduledDate: b.scheduledDate,
+    }));
+
+    if (!workerProfile) {
+      throw new Error("No worker profile found.");
+    }
+
+    // if (workerProfile.user && workerProfile.user.isBlocked) {
+    //     throw new Error('This worker account is currently suspended.');
+    // }
+
+    return { workerProfile, bookingData };
+  } catch (e) {
+    throw e;
+  }
+};
+
+export const editWorkerData = async (workerId, clientInfo, workerInfo) => {
+  const session = await mongoose.startSession();
+  try {
+    session.startTransaction();
+    const workerProfile = await editWorkerProfile(
+      workerId,
+      workerInfo,
+      session,
+    );
+
+    const user = await editUserData(workerProfile.user, clientInfo, session);
+
+    await session.commitTransaction();
+
+    return { user, workerProfile };
+  } catch (err) {
+    await session.abortTransaction();
+    throw err;
+  } finally {
+    await session.endSession();
+  }
+};
+
+const editUserData = async (userId, clientInfo = {}, session) => {
+  try {
+    const user = await User.findById(userId).session(session);
+    if (!user) throw new NotFoundError("User");
+
+    // ── Phone ────────────────────────────────────────────────────────
+    if (clientInfo.phone) {
+      const normalizedPhone = normalizePhone(clientInfo.phone);
+      const existingPhone = await User.findOne({
+        phone: normalizedPhone,
+        _id: { $ne: userId },
+      }).session(session);
+      if (existingPhone) throw new AppError("Phone number already in use", 409);
+      user.phone = normalizedPhone;
+    }
+
+    if (clientInfo.email) {
+      const existingEmail = await User.findOne({
+        email: clientInfo.email.toLowerCase(),
+        _id: { $ne: userId },
+      }).session(session);
+      if (existingEmail) throw new AppError("Email already in use", 409);
+      user.email = clientInfo.email.toLowerCase();
+    }
+
+    if (clientInfo.lastName) user.lastName = clientInfo.lastName;
+    if (clientInfo.firstName) {
+      console.log("Updating firstName to:", clientInfo.firstName);
+      user.firstName = clientInfo.firstName;
+    }
+
+    // أضيفي هذا للتأكد قبل الحفظ
+    console.log("Is modified:", user.isModified());
+    await user.save({ session });
+
+    return user;
+  } catch (e) {
+    throw e;
+  }
+};
+
+const editWorkerProfile = async (workerId, workerInfo = {}, session) => {
+  try {
+    const profile = await WorkerProfile.findById(workerId).session(session);
+    if (!profile) throw new NotFoundError("Worker profile");
+
+    if (workerInfo.city) profile.city = workerInfo.city;
+
+    if (workerInfo.approvalStatus) {
+      profile.approvalStatus = workerInfo.approvalStatus;
+      profile.isApproved = workerInfo.approvalStatus === "approved";
+    }
+
+    if (workerInfo.availability?.length) {
+      for (const slot of workerInfo.availability) {
+        if (!validDays.includes(slot.day))
+          throw new AppError(`Invalid day: ${slot.day}`, 400);
+        if (!timeRegex.test(slot.from) || !timeRegex.test(slot.to))
+          throw new AppError(
+            `Invalid time format for ${slot.day} — use HH:MM`,
+            400,
+          );
+      }
+
+      // merge — بنحدث الـ days الموجودة ونضيف الجديدة
+      for (const incoming of workerInfo.availability) {
+        const existing = profile.availability.find(
+          (a) => a.day === incoming.day,
+        );
+        if (existing) {
+          existing.from = incoming.from;
+          existing.to = incoming.to;
+          existing.isAvailable = incoming.isAvailable ?? existing.isAvailable;
+        } else {
+          profile.availability.push(incoming);
+        }
+      }
+    }
+
+    if (workerInfo.memberSince) profile.memberSince = workerInfo.memberSince;
+    if (workerInfo.categories) profile.categories = workerInfo.categories;
+
+    await profile.save({ session });
+
+    return profile;
+  } catch (e) {
+    throw e;
   }
 };

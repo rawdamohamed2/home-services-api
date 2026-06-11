@@ -19,7 +19,7 @@ export const getMessagesValidation = roomIdValidation
 
 export const sendMessageValidation = roomIdValidation
   .keys({
-    message: Joi.string().min(20).required(),
+    message: Joi.string().min(5).required(),
 
     messageType: Joi.string()
       .trim()

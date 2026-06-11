@@ -10,6 +10,7 @@ import {
   getMyReviews,
   completeBooking,
   deleteMe,
+  updateWorker,
 } from "./worker.controller.js";
 import { protect } from "../../core/middleware/authMiddleware.js";
 import { authorize, isStaff } from "../../core/middleware/roleMiddleware.js";
@@ -23,6 +24,7 @@ import {
   workerBookingSchema,
   workerCompletedSchema,
   workerSearchSchema,
+  workerUpdatedSchema,
 } from "./worker.validation.js";
 import { checkPermission } from "../../core/middleware/permissionMiddleware.js";
 
@@ -74,6 +76,17 @@ workerRouter.patch(
 // );
 
 // workerRouter.get("/me", protect, authorize("worker"), getMe);
+
+workerRouter.patch(
+  "/:id/complete",
+  validate(workerCompletedSchema),
+  protect,
+  authorize("worker"),
+  completeBooking,
+);
+
+workerRouter.delete("/me", protect, authorize("worker"), deleteMe);
+
 workerRouter.get(
   "/:id",
   validate(getWorkerByIdSchema),
@@ -92,12 +105,11 @@ workerRouter.get(
   getAllWorkers,
 );
 workerRouter.patch(
-  "/:id/complete",
-  validate(workerCompletedSchema),
+  "/:workerId/edit",
+  validate(workerUpdatedSchema),
   protect,
-  authorize("worker"),
-  completeBooking,
+  isStaff,
+  checkPermission("manage_users"),
+  updateWorker,
 );
-
-workerRouter.delete("/me", protect, authorize("worker"), deleteMe);
 export default workerRouter;

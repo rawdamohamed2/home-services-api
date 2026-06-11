@@ -167,10 +167,7 @@ const userSchema = new mongoose.Schema(
 
     verifyOtp: String,
     verifyOtpExpires: Date,
-    refreshToken: {
-      type: String,
-      default: null,
-    },
+    refreshToken: { type: String, default: null },
     resetOtpCode: String,
     resetOtpExpires: Date,
   },

@@ -366,7 +366,7 @@ export const fetchWorkerById = async (id) => {
       )
       .populate("categories", "name");
 
-    const { bookings } = await fetchBookings({ user: workerProfile.user._id });
+    const { bookings } = await fetchBookings({}, workerProfile.user);
 
     let bookingData = bookings.map((b) => ({
       status: b.status,

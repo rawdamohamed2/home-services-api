@@ -9,9 +9,8 @@ router.use(protect);
 // Wallet Info
 router.get("/me", userWalletController.getMyWallet);
 
-// Payment History (Booking Payments + Subscriptions)
+// Payment History (Booking Payments + Subscriptions combined)
 router.get("/transactions", userWalletController.getMyTransactions);
-router.get("/payments", userWalletController.getMyPayments);
-router.get("/subscriptions", userWalletController.getMySubscriptionsPayments);
+
 
 export default router;

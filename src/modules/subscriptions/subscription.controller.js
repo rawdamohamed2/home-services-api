@@ -47,11 +47,11 @@ export const subscribe = async (req, res, next) => {
 
 export const cancelSubscription = async (req, res, next) => {
   try {
-    const subscription = await subscriptionService.cancelSubscription(
+    const result = await subscriptionService.cancelSubscription(
       req.user._id,
       req.params.id
     );
-    return ApiResponse.success(res, subscription, "Subscription cancelled");
+    return ApiResponse.success(res, result, "Subscription cancelled successfully");
   } catch (error) { next(error); }
 };
 

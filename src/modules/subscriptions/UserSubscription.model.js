@@ -17,7 +17,7 @@ const userSubscriptionSchema = new mongoose.Schema(
     status: {
       type: String,
       enum: {
-        values: ["active", "cancelled", "expired"],
+        values: ["active", "expired"],  
         message: "Invalid subscription status",
       },
       default: "active",
@@ -91,11 +91,7 @@ userSubscriptionSchema.methods.isExpired = function () {
 };
 
 userSubscriptionSchema.methods.canRenew = function () {
-  return (
-    this.status === "expired" ||
-    this.status === "cancelled" ||
-    (this.status === "active" && this.isExpired())
-  );
+  return this.status === "expired";
 };
 
 userSubscriptionSchema.methods.canCancel = function () {

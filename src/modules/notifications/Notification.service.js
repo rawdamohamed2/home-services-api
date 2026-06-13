@@ -5,6 +5,7 @@ import { EVENTS } from "../../socket/socket.events.js";
 import { sendFCM } from "../../core/firebase/fcm.js";
 
 const MESSAGES = {
+  // ── Booking ──────────────────────────────────────────────────────
   booking_created: {
     title: "Booking Created",
     body: (d) =>
@@ -53,10 +54,76 @@ const MESSAGES = {
     body: (d) =>
       `You've been assigned to ${d.serviceName} on ${d.scheduledDate}.`,
   },
-  payment_received: {
-    title: "Payment Received",
-    body: (d) => `Payment of ${d.amount} L.E received for ${d.serviceName}.`,
+
+  // ── Chat ─────────────────────────────────────────────────────────
+  new_message: {
+    title: (d) => d.senderName,
+    body: (d) => d.messageText,
   },
+  // ── Support Tickets ──────────────────────────────────────────────
+  ticket_assigned: {
+    title: "Ticket Assigned",
+    body: (d) =>
+      `Ticket #${d.ticketCode} (${d.subject}) has been assigned to you.`,
+  },
+  ticket_resolved: {
+    title: "Ticket Resolved",
+    body: (d) => `Your support ticket "${d.subject}" has been resolved.`,
+  },
+  ticket_closed: {
+    title: "Ticket Closed",
+    body: (d) => `Your support ticket "${d.subject}" has been closed.`,
+  },
+
+  // ═══════════════════════════════════════════════════════════════
+  // ── Payments ─────────────────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════════
+
+  // المستخدم دفع بنجاح (card/instapay confirmed)
+  payment_received: {
+    title: "Payment Successful",
+    body: (d) =>
+      `Your payment of ${d.amount} L.E for ${d.serviceName} was successful.`,
+  },
+
+  // المستخدم رفع proof صورة وفي انتظار مراجعة الأدمن
+  payment_pending_verification: {
+    title: "Payment Under Review",
+    body: (d) =>
+      `Your payment of ${d.amount} L.E for ${d.serviceName} is being verified. We'll notify you once approved.`,
+  },
+
+  // الدفع فشل (card declined, AI verification failed, etc.)
+  payment_failed: {
+    title: "Payment Failed",
+    body: (d) =>
+      `Your payment of ${d.amount} L.E for ${d.serviceName} failed. Please try again.`,
+  },
+
+  // تم رد المبلغ
+  payment_refunded: {
+    title: "Payment Refunded",
+    body: (d) =>
+      `${d.amount} L.E has been refunded to you for ${d.serviceName}.${d.reason ? ` Reason: ${d.reason}` : ""}`,
+  },
+
+  // ── Earnings (Worker side) ─────────────────────────────────────────
+
+  // العامل خلص شغلانة — الفلوس وقعت pending في محفظته
+  earnings_pending: {
+    title: "Earnings Pending",
+    body: (d) =>
+      `You earned ${d.amount} L.E from ${d.serviceName}. It will be available after admin approval.`,
+  },
+
+  // الأدمن وافق على الدفعة — الفلوس بقت في الـ balance
+  earnings_released: {
+    title: "Earnings Released",
+    body: (d) =>
+      `${d.amount} L.E from ${d.serviceName} has been added to your wallet balance.`,
+  },
+
+  // ── Wallet ───────────────────────────────────────────────────────
   wallet_credited: {
     title: "Wallet Credited",
     body: (d) => `${d.amount} L.E added to your wallet.`,
@@ -65,22 +132,28 @@ const MESSAGES = {
     title: "Wallet Debited",
     body: (d) => `${d.amount} L.E deducted from your wallet.`,
   },
-  new_message: {
-    title: (d) => d.senderName,
-    body: (d) => d.messageText,
-  },
-  ticket_assigned: {
-    title: "Ticket Assigned",
+
+  // ── Withdrawals (Worker side) ───────────────────────────────────────
+
+  withdrawal_requested: {
+    title: "Withdrawal Requested",
     body: (d) =>
-      `Ticket #${d.ticketCode} (${d.subject}) has been assigned to you.`,
+      `Your withdrawal request of ${d.amount} L.E has been submitted and is pending approval.`,
   },
-  ticket_resolved: {
-    title: "Ticket Resolved ",
-    body: (d) => `Your support ticket "${d.subject}" has been resolved.`,
+  withdrawal_approved: {
+    title: "Withdrawal Approved",
+    body: (d) =>
+      `Your withdrawal of ${d.amount} L.E has been approved and is being processed.`,
   },
-  ticket_closed: {
-    title: "Ticket Closed",
-    body: (d) => `Your support ticket "${d.subject}" has been closed.`,
+  withdrawal_rejected: {
+    title: "Withdrawal Rejected",
+    body: (d) =>
+      `Your withdrawal request of ${d.amount} L.E was rejected.${d.reason ? ` Reason: ${d.reason}` : ""}`,
+  },
+  withdrawal_paid: {
+    title: "Withdrawal Paid",
+    body: (d) =>
+      `${d.amount} L.E has been transferred to your ${d.method === "instapay" ? "InstaPay" : "card"} account.`,
   },
 };
 
@@ -98,6 +171,20 @@ const SOCKET_EVENT_MAP = {
   ticket_assigned: EVENTS.NOTIFICATION,
   ticket_resolved: EVENTS.NOTIFICATION,
   ticket_closed: EVENTS.NOTIFICATION,
+
+  // ── Payments ──────────────────────────────────────────────────
+  payment_received: EVENTS.PAYMENT_RECEIVED,
+  payment_pending_verification: EVENTS.PAYMENT_PENDING,
+  payment_failed: EVENTS.PAYMENT_FAILED,
+  payment_refunded: EVENTS.PAYMENT_REFUNDED,
+  earnings_pending: EVENTS.EARNINGS_PENDING,
+  earnings_released: EVENTS.EARNINGS_RELEASED,
+  wallet_credited: EVENTS.NOTIFICATION,
+  wallet_debited: EVENTS.NOTIFICATION,
+  withdrawal_requested: EVENTS.WITHDRAWAL_REQUESTED,
+  withdrawal_approved: EVENTS.WITHDRAWAL_APPROVED,
+  withdrawal_rejected: EVENTS.WITHDRAWAL_REJECTED,
+  withdrawal_paid: EVENTS.WITHDRAWAL_PAID,
 };
 
 export const sendNotification = async (
@@ -107,19 +194,20 @@ export const sendNotification = async (
   messageData = {},
 ) => {
   try {
+    console.log("_________________________________________");
     const template = MESSAGES[type];
     if (!template) {
       console.warn("[Notification] Unknown type:", type);
       return null;
     }
-    console.log(type);
+
     const title =
       typeof template.title === "function"
         ? template.title(messageData)
         : template.title;
 
     const body = template.body(messageData);
-
+    console.log(body);
     const notification = await Notification.create({
       user: userId,
       title,
@@ -142,7 +230,7 @@ export const sendNotification = async (
       },
       ...data,
     });
-    console.log(socketEvent);
+
     // 3. بعت FCM لو الـ user offline
     const User = mongoose.model("User");
     const user = await User.findById(userId).select("fcmToken").lean();
@@ -192,11 +280,53 @@ export const notifyWorkerAssigned = (u, d, m) =>
   sendNotification(u, "worker_assigned", d, m);
 export const notifyBookingUpdated = (u, d, m) =>
   sendNotification(u, "booking_offer_updated", d, m);
+
 export const notifyNewMessage = (u, d, m) =>
   sendNotification(u, "new_message", d, m);
+
 export const notifyTicketAssigned = (u, d, m) =>
   sendNotification(u, "ticket_assigned", d, m);
 export const notifyTicketResolved = (u, d, m) =>
   sendNotification(u, "ticket_resolved", d, m);
 export const notifyTicketClosed = (u, d, m) =>
   sendNotification(u, "ticket_closed", d, m);
+
+// User: payment تم بنجاح
+export const notifyPaymentReceived = (u, d, m) =>
+  sendNotification(u, "payment_received", d, m);
+
+// User: payment proof تحت المراجعة
+export const notifyPaymentPendingVerification = (u, d, m) =>
+  sendNotification(u, "payment_pending_verification", d, m);
+
+// User: payment فشل
+export const notifyPaymentFailed = (u, d, m) =>
+  sendNotification(u, "payment_failed", d, m);
+
+// User: payment تم رده
+export const notifyPaymentRefunded = (u, d, m) =>
+  sendNotification(u, "payment_refunded", d, m);
+
+// Worker: فلوس pending بعد إكمال البوكينج
+export const notifyEarningsPending = (u, d, m) =>
+  sendNotification(u, "earnings_pending", d, m);
+
+// Worker: الأدمن وافق على الدفعة → الفلوس بقت available
+export const notifyEarningsReleased = (u, d, m) =>
+  sendNotification(u, "earnings_released", d, m);
+
+// Wallet
+export const notifyWalletCredited = (u, d, m) =>
+  sendNotification(u, "wallet_credited", d, m);
+export const notifyWalletDebited = (u, d, m) =>
+  sendNotification(u, "wallet_debited", d, m);
+
+// ── Withdrawals (Worker side) ───────────────────────────────────────
+export const notifyWithdrawalRequested = (u, d, m) =>
+  sendNotification(u, "withdrawal_requested", d, m);
+export const notifyWithdrawalApproved = (u, d, m) =>
+  sendNotification(u, "withdrawal_approved", d, m);
+export const notifyWithdrawalRejected = (u, d, m) =>
+  sendNotification(u, "withdrawal_rejected", d, m);
+export const notifyWithdrawalPaid = (u, d, m) =>
+  sendNotification(u, "withdrawal_paid", d, m);

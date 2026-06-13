@@ -6,7 +6,7 @@ import {
 } from "../../core/utils/Errors.js";
 import BookingAssignment from "../bookingAssignment/BookingAssignment.model.js";
 import mongoose from "mongoose";
-import { dispatchBooking } from "../../core/utils/Dispatchservice.js";
+import { dispatchBooking } from "../../core/services/Dispatchservice.js";
 import { getUserProfile } from "../users/user.service.js";
 import {
   notifyBookingCancelled,
@@ -21,6 +21,7 @@ import {
 } from "../../core/services/Bookingchat.integration.js";
 import WorkerProfile from "../workers/WorkerProfile.model.js";
 import Payment from "../payments/Payment.model.js";
+import { getWorkerId } from "../workers/worker.service.js";
 
 export const orderService = async (
   service,
@@ -89,6 +90,15 @@ export const fetchBookings = async (
     if (user.role !== "admin") {
       if (user.role === "user") {
         filter.user = new mongoose.Types.ObjectId(user.id);
+        filter.status = {
+          $in: ["accepted", "in-progress"],
+        };
+      } else if (user.role === "worker") {
+        const workerId = await getWorkerId(user.id);
+        filter.worker = new mongoose.Types.ObjectId(workerId);
+        filter.status = {
+          $in: ["accepted", "in-progress"],
+        };
       }
     }
     if (id) {
@@ -108,7 +118,7 @@ export const fetchBookings = async (
 
     const [bookings, total] = await Promise.all([
       Booking.find(filter)
-        .select("status scheduledDate")
+        .select("status scheduledDate location totalAmount")
         .populate("service", "name category")
         .populate("user", "firstName lastName phone profileImage email")
         .populate({
@@ -127,7 +137,7 @@ export const fetchBookings = async (
         .lean(),
       Booking.countDocuments(filter),
     ]);
-    console.log(bookings);
+
     return {
       bookings,
       total,
@@ -189,6 +199,7 @@ export const markBookingComplete = async (bookingId) => {
 
     const booking = await Booking.findById(bookingId)
       .populate("service", "name")
+      .populate("user", "firstName lastName")
       .populate("worker", "user")
       .session(session);
 
@@ -225,13 +236,23 @@ export const markBookingComplete = async (bookingId) => {
 
       notifyBookingCompleted(
         booking.user,
-        { bookingId: booking._id.toString() },
+        {
+          booking_id: booking._id.toString(),
+          service_name: booking.service.name,
+          fair: booking.totalAmount,
+          customer_name: `${booking.user.firstName} ${booking.user.lastName}`,
+        },
         { serviceName },
       ),
 
       notifyBookingCompleted(
         workerId,
-        { bookingId: booking._id.toString() },
+        {
+          booking_id: booking._id.toString(),
+          service_name: booking.service.name,
+          fair: booking.totalAmount,
+          customer_name: `${booking.user.firstName} ${booking.user.lastName}`,
+        },
         { serviceName },
       ),
     ]);
@@ -437,5 +458,43 @@ export const fetchBookingTimeline = async (id) => {
     return booking;
   } catch (err) {
     throw err;
+  }
+};
+
+export const fetchCompletedBookings = async (user) => {
+  try {
+    const filter = {};
+    if (user.role === "user") {
+      filter.user = new mongoose.Types.ObjectId(user.id);
+    } else if (user.role === "worker") {
+      const workerId = await getWorkerId(user.id);
+      filter.worker = new mongoose.Types.ObjectId(workerId);
+    }
+    filter.status = {
+      $in: ["completed"],
+    };
+    return await Booking.find(filter)
+      .select("status scheduledDate location totalAmount")
+      .populate("service", "name category")
+      .populate("user", "firstName lastName phone profileImage email")
+      .populate({
+        path: "worker",
+        select:
+          "nationalIdFront nationalIdBack licenseImage availabilityStatus bio categories",
+        populate: [
+          {
+            path: "user",
+            select: "firstName lastName phone profileImage email",
+          },
+          {
+            path: "categories",
+            select: "name",
+          },
+        ],
+      })
+      .populate("review")
+      .lean();
+  } catch (e) {
+    throw e;
   }
 };

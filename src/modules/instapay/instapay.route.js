@@ -21,8 +21,12 @@ export const upload = multer({
 // ── Admin Routes — /api/admin/payments/instapay/... ───────
 router.use(protect, authorize("admin", "owner"));
 
-router.get("/",                                                   instapayController.adminGetInstapayPayments);
-router.patch("/:id/approve",                                      instapayController.adminApproveInstapayPayment);
-router.patch("/:id/reject",  validate(rejectWithdrawalSchema),    instapayController.adminRejectInstapayPayment);
+router.get("/", instapayController.adminGetInstapayPayments);
+router.patch("/:id/approve", instapayController.adminApproveInstapayPayment);
+router.patch(
+  "/:id/reject",
+  validate(rejectWithdrawalSchema),
+  instapayController.adminRejectInstapayPayment,
+);
 
 export default router;

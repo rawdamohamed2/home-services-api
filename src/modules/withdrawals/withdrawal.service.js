@@ -1,64 +1,102 @@
 import Withdrawal from "./Withdrawal.model.js";
 import Wallet from "../wallet/Wallet.model.js";
 import PaymentMethod from "../payments/paymentMethod.model.js";
+import {
+  notifyWalletDebited,
+  notifyWithdrawalApproved,
+  notifyWithdrawalRejected,
+  notifyWithdrawalRequested,
+} from "../notifications/Notification.service.js";
 
 //  Worker — Withdrawal Methods
 
 export const addWorkerCardMethod = async (userId, cardData) => {
-  const { cardholderName, cardNumber, expiryMonth, expiryYear, securityCode } = cardData;
+  const { cardholderName, cardNumber, expiryMonth, expiryYear, securityCode } =
+    cardData;
 
   if (!cardNumber || cardNumber.replace(/\s/g, "").length !== 16)
     throw new Error("Invalid card number");
 
   const cleanNumber = cardNumber.replace(/\s/g, "");
   const last4Digits = cleanNumber.slice(-4);
-  const cardBrand   =
-    cleanNumber[0] === "4" ? "Visa" :
-    cleanNumber[0] === "5" ? "Mastercard" : "Unknown";
+  const cardBrand =
+    cleanNumber[0] === "4"
+      ? "Visa"
+      : cleanNumber[0] === "5"
+        ? "Mastercard"
+        : "Unknown";
 
   const existing = await PaymentMethod.findOne({
-    owner: userId, ownerType: "worker", type: "card",
-    last4Digits, expiryMonth, expiryYear,
+    owner: userId,
+    ownerType: "worker",
+    type: "card",
+    last4Digits,
+    expiryMonth,
+    expiryYear,
   });
   if (existing) throw new Error("This card is already added");
 
-  const isFirst = !(await PaymentMethod.findOne({ owner: userId, ownerType: "worker" }));
+  const isFirst = !(await PaymentMethod.findOne({
+    owner: userId,
+    ownerType: "worker",
+  }));
 
   return await PaymentMethod.create({
-    owner: userId, ownerType: "worker", type: "card",
-    cardholderName, last4Digits, cardBrand,
-    expiryMonth, expiryYear,
+    owner: userId,
+    ownerType: "worker",
+    type: "card",
+    cardholderName,
+    last4Digits,
+    cardBrand,
+    expiryMonth,
+    expiryYear,
     cardToken: cleanNumber,
     isDefault: isFirst,
   });
 };
 
-export const addWorkerInstapayMethod = async (userId, { instapayId, accountHolderName }) => {
+export const addWorkerInstapayMethod = async (
+  userId,
+  { instapayId, accountHolderName },
+) => {
   if (!instapayId) throw new Error("InstaPay ID is required");
 
   const existing = await PaymentMethod.findOne({
-    owner: userId, ownerType: "worker", type: "instapay", instapayId,
+    owner: userId,
+    ownerType: "worker",
+    type: "instapay",
+    instapayId,
   });
   if (existing) throw new Error("This InstaPay account is already added");
 
-  const isFirst = !(await PaymentMethod.findOne({ owner: userId, ownerType: "worker" }));
+  const isFirst = !(await PaymentMethod.findOne({
+    owner: userId,
+    ownerType: "worker",
+  }));
 
   return await PaymentMethod.create({
-    owner: userId, ownerType: "worker", type: "instapay",
-    instapayId, accountHolderName,
+    owner: userId,
+    ownerType: "worker",
+    type: "instapay",
+    instapayId,
+    accountHolderName,
     isDefault: isFirst,
   });
 };
 
 export const getWorkerWithdrawalMethods = async (userId) => {
   return await PaymentMethod.find({
-    owner: userId, ownerType: "worker", isActive: true,
+    owner: userId,
+    ownerType: "worker",
+    isActive: true,
   }).sort({ isDefault: -1, createdAt: -1 });
 };
 
 export const deleteWorkerWithdrawalMethod = async (userId, methodId) => {
   const method = await PaymentMethod.findOne({
-    _id: methodId, owner: userId, ownerType: "worker",
+    _id: methodId,
+    owner: userId,
+    ownerType: "worker",
   });
   if (!method) throw new Error("Withdrawal method not found");
 
@@ -68,9 +106,15 @@ export const deleteWorkerWithdrawalMethod = async (userId, methodId) => {
 
   if (wasDefault) {
     const next = await PaymentMethod.findOne({
-      owner: userId, ownerType: "worker", isActive: true, _id: { $ne: methodId },
+      owner: userId,
+      ownerType: "worker",
+      isActive: true,
+      _id: { $ne: methodId },
     });
-    if (next) { next.isDefault = true; await next.save(); }
+    if (next) {
+      next.isDefault = true;
+      await next.save();
+    }
   }
 };
 
@@ -78,21 +122,32 @@ export const deleteWorkerWithdrawalMethod = async (userId, methodId) => {
 
 export const requestWithdrawal = async (userId, { amount, methodId }) => {
   const wallet = await Wallet.findOne({ owner: userId });
-  if (!wallet)          throw new Error("Wallet not found");
+  if (!wallet) throw new Error("Wallet not found");
   if (!wallet.isActive) throw new Error("Wallet is inactive");
-  if (!wallet.hasSufficientBalance(amount)) throw new Error("Insufficient balance");
+  if (!wallet.hasSufficientBalance(amount))
+    throw new Error("Insufficient balance");
 
   const method = await PaymentMethod.findOne({
-    _id: methodId, owner: userId, ownerType: "worker", isActive: true,
+    _id: methodId,
+    owner: userId,
+    ownerType: "worker",
+    isActive: true,
   });
   if (!method) throw new Error("Withdrawal method not found");
 
   const methodDetails =
     method.type === "card"
-      ? { cardholderName: method.cardholderName, last4Digits: method.last4Digits, cardBrand: method.cardBrand }
-      : { instapayId: method.instapayId, accountHolderName: method.accountHolderName };
+      ? {
+          cardholderName: method.cardholderName,
+          last4Digits: method.last4Digits,
+          cardBrand: method.cardBrand,
+        }
+      : {
+          instapayId: method.instapayId,
+          accountHolderName: method.accountHolderName,
+        };
 
-  return await Withdrawal.create({
+  const withdrawal = await Withdrawal.create({
     worker: userId,
     wallet: wallet._id,
     amount,
@@ -100,11 +155,19 @@ export const requestWithdrawal = async (userId, { amount, methodId }) => {
     methodDetails,
     status: "pending",
   });
+
+  await notifyWithdrawalRequested(
+    userId,
+    { withdrawalId: withdrawal._id.toString() },
+    { amount },
+  );
+
+  return withdrawal;
 };
 
 export const withdrawAll = async (userId, methodId) => {
   const wallet = await Wallet.findOne({ owner: userId });
-  if (!wallet)            throw new Error("Wallet not found");
+  if (!wallet) throw new Error("Wallet not found");
   if (wallet.balance <= 0) throw new Error("No balance to withdraw");
   return await requestWithdrawal(userId, { amount: wallet.balance, methodId });
 };
@@ -134,11 +197,35 @@ export const getAdminWithdrawals = async (query = {}) => {
 export const approveWithdrawal = async (withdrawalId, adminId) => {
   const withdrawal = await Withdrawal.findById(withdrawalId);
   if (!withdrawal) throw new Error("Withdrawal not found");
-  return await withdrawal.approve(adminId);
+
+  await withdrawal.approve(adminId);
+
+  await notifyWithdrawalApproved(
+    withdrawal.worker,
+    { withdrawalId: withdrawal._id.toString() },
+    { amount: withdrawal.amount },
+  );
+
+  await notifyWalletDebited(
+    withdrawal.worker,
+    { withdrawalId: withdrawal._id.toString() },
+    { amount: withdrawal.amount },
+  );
+
+  return withdrawal;
 };
 
 export const rejectWithdrawal = async (withdrawalId, adminId, reason) => {
   const withdrawal = await Withdrawal.findById(withdrawalId);
   if (!withdrawal) throw new Error("Withdrawal not found");
-  return await withdrawal.reject(adminId, reason);
+
+  await withdrawal.reject(adminId, reason);
+
+  await notifyWithdrawalRejected(
+    withdrawal.worker,
+    { withdrawalId: withdrawal._id.toString() },
+    { amount: withdrawal.amount, reason },
+  );
+
+  return withdrawal;
 };

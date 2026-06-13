@@ -1,14 +1,14 @@
 import { findNearbyWorkersByCategory } from "./Workerfinder.js";
-import { AppError } from "./Errors.js";
+import { AppError } from "../utils/Errors.js";
 import Booking from "../../modules/bookings/Booking.model.js";
 import BookingAssignment from "../../modules/bookingAssignment/BookingAssignment.model.js";
 import { notifyNewOffer } from "../../modules/notifications/Notification.service.js";
 
 export const dispatchBooking = async (bookingId) => {
-  const booking = await Booking.findById(bookingId).populate(
-    "service",
-    "name category",
-  );
+  const booking = await Booking.findById(bookingId)
+    .populate("service", "name category")
+    .populate("user", "firstName lastName");
+
   if (!booking) throw new AppError("Booking not found", 404);
   if (booking.status !== "pending")
     throw new AppError("Only pending bookings can be dispatched", 400);
@@ -35,13 +35,20 @@ export const dispatchBooking = async (bookingId) => {
     })),
   );
 
-  // 🔔 Notify each worker about the new offer
-  await Promise.allSettled(
-    workers.map((w) =>
-      notifyNewOffer(w.workerUserId, {
+  workers.map((w) =>
+    notifyNewOffer(
+      w.workerUserId,
+      {
         serviceName: booking.service?.name,
         price: booking.totalAmount,
-      }),
+        booking_id: booking._id,
+        location: booking.location,
+        scheduledDate: booking.scheduledDate,
+      },
+      {
+        serviceName: booking.service?.name,
+        price: booking.totalAmount,
+      },
     ),
   );
 

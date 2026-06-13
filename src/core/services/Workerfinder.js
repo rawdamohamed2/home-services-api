@@ -24,12 +24,12 @@ export const findNearbyWorkersWithDistance = async ({
 
 const _searchWithExpansion = async (coordinates, initialRadius, limit) => {
   let radius = initialRadius;
-  console.log("_searchWithExpansion", radius);
+
   while (radius <= MAX_RADIUS_METERS) {
     const workers = await _baseQuery(coordinates, radius, limit)
       .select("_id firstName lastName profileImage location.coordinates")
       .lean();
-    console.log("_searchWithExpansion", workers);
+
     if (workers.length > 0) {
       console.log(`Found ${workers.length} workers within ${radius / 1000}km`);
       return workers;
@@ -64,53 +64,6 @@ const _baseQuery = (coordinates, maxDistance, limit) => {
     },
   }).limit(limit);
 };
-//
-// const _haversineKm = ([lng1, lat1], [lng2, lat2]) => {
-//   const R = 6371;
-//   const dLat = _rad(lat2 - lat1);
-//   const dLng = _rad(lng2 - lng1);
-//   const a =
-//     Math.sin(dLat / 2) ** 2 +
-//     Math.cos(_rad(lat1)) * Math.cos(_rad(lat2)) * Math.sin(dLng / 2) ** 2;
-//   return parseFloat(
-//     (R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))).toFixed(2),
-//   );
-// };
-//
-// const _rad = (deg) => (deg * Math.PI) / 180;
-//
-// export const debugWorkerQuery = async (coordinates) => {
-//   const User = mongoose.model("User");
-//
-//   const allWorkers = await User.find({ role: "worker" })
-//     .select(
-//       "firstName lastName enabledLocation location.coordinates isVerified isBlocked",
-//     )
-//     .lean();
-//
-//   const notBlocked = allWorkers.filter((w) => !w.isBlocked);
-//   const verified = notBlocked.filter((w) => w.isVerified);
-//   const locationEnabled = verified.filter((w) => w.enabledLocation);
-//   const hasCoords = locationEnabled.filter(
-//     (w) => w.location?.coordinates?.length === 2,
-//   );
-//
-//   console.log("=== Worker Debug ===");
-//   console.log(`Total role:worker     → ${allWorkers.length}`);
-//   console.log(`isBlocked:false       → ${notBlocked.length}`);
-//   console.log(`isVerified:true       → ${verified.length}`);
-//   console.log(`enabledLocation:true  → ${locationEnabled.length}`);
-//   console.log(`has valid coordinates → ${hasCoords.length}`);
-//   console.table(
-//     allWorkers.map((w) => ({
-//       name: `${w.firstName} ${w.lastName}`,
-//       isVerified: w.isVerified,
-//       isBlocked: w.isBlocked,
-//       enabledLocation: w.enabledLocation,
-//       coordinates: w.location?.coordinates?.join(", ") ?? "NONE",
-//     })),
-//   );
-// };
 
 export const findNearbyWorkersByCategory = async ({
   coordinates,

@@ -11,6 +11,7 @@ import {
   getNearbyBookings,
   getBookingTimeline,
   completeBooking,
+  getCompletedBookings,
 } from "./booking.controller.js";
 import { authorize } from "../../core/middleware/roleMiddleware.js";
 import { validate } from "../../core/middleware/validate.js";
@@ -42,6 +43,12 @@ bookingRouter.get(
   authorize("worker"),
   validate(nearByBookingValidation),
   getNearbyBookings,
+);
+
+bookingRouter.get(
+  "/completed",
+  authorize("user", "worker"),
+  getCompletedBookings,
 );
 
 bookingRouter.get(

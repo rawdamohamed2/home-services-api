@@ -11,6 +11,7 @@ import { notifyBookingCompleted } from "../notifications/Notification.service.js
 import { fetchBookings } from "../bookings/booking.service.js";
 import { normalizePhone } from "../../core/utils/normalizePhone.js";
 import { timeRegex, validDays } from "../../core/utils/validation.helper.js";
+import { onBookingCompleted } from "../../core/services/Bookingchat.integration.js";
 
 export const getUserIdsByName = async (name) => {
   try {
@@ -35,6 +36,16 @@ export const getCategoryIdByName = async (categoryName) => {
     return categoryDoc ? categoryDoc._id : "NOT_FOUND";
   } catch (error) {
     throw new Error(error.message);
+  }
+};
+
+export const getWorkerId = async (userId) => {
+  try {
+    const worker = await WorkerProfile.findOne({ user: userId });
+    if (!worker) return NotFoundError("Worker");
+    return worker._id;
+  } catch (error) {
+    throw error;
   }
 };
 
@@ -261,42 +272,60 @@ export const deleteworker = async (userId) => {
 
 export const markBookingComplete = async (id, userId) => {
   try {
+    session.startTransaction();
+
     const worker = await fetchWorkerById(userId);
 
     const booking = await Booking.findById({ _id: id, worker: worker._id })
       .populate("service", "name")
-      .populate("user", "firstName lastName");
+      .populate("user", "firstName lastName")
+      .session(session);
 
     if (!booking) throw new NotFoundError("Booking");
+
+    if (!["accepted", "in-progress"].includes(booking.status))
+      throw new AppError(
+        `Cannot complete a booking with status "${booking.status}"`,
+        400,
+      );
 
     booking.status = "completed";
     booking.timeline.push({
       status: "completed",
       timestamp: new Date(),
-      note: `Marked as completed by admin`,
+      note: `Marked as completed by worker`,
     });
+    await booking.save();
 
     await WorkerProfile.findOneAndUpdate(
       { user: booking.worker?.user || booking.worker },
       { $inc: { completedJobs: 1 } },
+      { session },
     );
 
-    await booking.save();
+    await session.commitTransaction();
 
-    await notifyBookingCompleted(booking.user._id, {
-      title: "Service Completed",
-      metadata: {
-        booking_id: booking._id.toString(),
-        service_name: booking.service.name,
-        fair: booking.totalAmount,
-        customer_name: `${booking.user.firstName} ${booking.user.lastName}`,
-      },
-      messageData: { serviceName: booking.service.name },
-    });
+    await Promise.allSettled([
+      onBookingCompleted(booking),
+
+      await notifyBookingCompleted(booking.user._id, {
+        title: "Service Completed",
+        metadata: {
+          booking_id: booking._id.toString(),
+          service_name: booking.service.name,
+          fair: booking.totalAmount,
+          customer_name: `${booking.user.firstName} ${booking.user.lastName}`,
+        },
+        messageData: { serviceName: booking.service.name },
+      }),
+    ]);
 
     return booking;
   } catch (err) {
+    await session.abortTransaction();
     throw err;
+  } finally {
+    await session.endSession();
   }
 };
 
@@ -348,7 +377,7 @@ export const fetchAllWorkers = async (filters) => {
       limit: parseInt(limit),
     };
   } catch (error) {
-    throw e;
+    throw error;
   }
 };
 

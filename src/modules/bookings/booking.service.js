@@ -108,7 +108,7 @@ export const fetchBookings = async (
 
     const [bookings, total] = await Promise.all([
       Booking.find(filter)
-        .select("status scheduledDate")
+        .select("status scheduledDate location")
         .populate("service", "name category")
         .populate("user", "firstName lastName phone profileImage email")
         .populate({

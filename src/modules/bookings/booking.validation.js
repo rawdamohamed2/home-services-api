@@ -36,7 +36,7 @@ export const createBookingValidation = Joi.object({
 export const searchBookingValidation = Joi.object({
   page: Joi.number().integer().min(1).default(1),
 
-  limit: Joi.number().integer().min(1).max(11).default(5).messages({
+  limit: Joi.number().integer().min(1).max(50).default(5).messages({
     "number.max": "page cannot exceed 11",
   }),
 

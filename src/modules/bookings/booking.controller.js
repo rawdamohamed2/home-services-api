@@ -133,15 +133,9 @@ export const getBookings = async (req, res) => {
   try {
     const data = req.query;
     const user = req.user;
-    console.log(req.user);
-    const { bookings, total } = await fetchBookings(data, user);
-    ApiResponse.sendPaginated(
-      res,
-      bookings,
-      total,
-      bookings.page,
-      bookings.limit,
-    );
+    const { bookings, total, page, limit } = await fetchBookings(data, user);
+    console.log(bookings);
+    ApiResponse.sendPaginated(res, bookings, total, page, limit);
   } catch (err) {
     errorHandler(err, req, res);
   }

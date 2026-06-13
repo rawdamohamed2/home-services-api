@@ -27,7 +27,7 @@ export const verifyReceiptWithAI = async (imageBuffer, mimetype, originalname) =
     const keywordsFound  = data.result?.keywords_found || [];
     const extractedText  = data.result?.text || "";
 
-    const amountMatch   = extractedText.match(/(\d+(?:\.\d{1,2})?)\s*(?:egp|ecr|جنيه|ج\.م)/i);
+    const amountMatch   = extractedText.match(/(\d+(?:\.\d{1,2})?)\s*(?:egp|ecr)/i);
     const detectedAmount = amountMatch ? parseFloat(amountMatch[1]) : null;
 
     return { isValid, keywordsFound, extractedText, detectedAmount, rawResponse: data };

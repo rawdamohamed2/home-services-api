@@ -29,6 +29,8 @@ import subscriptionRouter from "./modules/subscriptions/subscription.route.js";
 import subscriptionAdminRouter from "./modules/subscriptions/subscriptionAdmin.route.js";
 import ChatRoutes from "./modules/chats/chat.route.js";
 import TrackingRoutes from "./modules/Tracking system/tracking.routes.js";
+import reviewRouter      from "./modules/reviews/review.route.js";
+import reviewAdminRouter from "./modules/reviews/reviewAdmin.route.js";
 
 const app = express();
 const httpServer = createServer(app);
@@ -66,6 +68,8 @@ app.use("/api/subscriptions", subscriptionRouter);
 app.use("/api/admin/subscriptions", subscriptionAdminRouter);
 app.use("/api/chat", ChatRoutes);
 app.use("/api/tracking", TrackingRoutes);
+app.use("/api/reviews",       reviewRouter);
+app.use("/api/admin/reviews", reviewAdminRouter);
 
 app.get("/", (req, res) => {
   res.status(200).json({

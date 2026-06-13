@@ -116,6 +116,14 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    isMuted: {
+      type: Boolean,
+      default: false,
+    },
+    mutedUntil: {
+      type: Date,
+      default: null,
+    },
 
     wallet: {
       type: mongoose.Schema.Types.ObjectId,

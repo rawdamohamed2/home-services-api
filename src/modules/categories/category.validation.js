@@ -42,7 +42,7 @@ export const categoryIdSchema = Joi.object({
 
 export const getCategoriesSchema = Joi.object({
     page: Joi.number().min(1).default(1),
-    limit: Joi.number().min(1).max(50).default(10),
+    limit: Joi.number().min(1).max(50).default(20),
     isActive: Joi.string().valid('true', 'false'),
     search: Joi.string().max(100).optional()
 }).unknown(false);

@@ -216,7 +216,7 @@ bookingAssignmentSchema.statics.sendToWorkers = async function (
       status: "sent",
       priority,
       assignmentOrder: index + 1,
-      expiryTime: new Date(Date.now() + 30 * 60 * 1000),
+      expiryTime: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
     };
   });
   return await this.insertMany(assignments);

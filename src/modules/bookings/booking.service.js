@@ -1,5 +1,9 @@
 import Booking from "./Booking.model.js";
-import { NotFoundError, ValidationError } from "../../core/utils/Errors.js";
+import {
+  NotFoundError,
+  ValidationError,
+  AppError,
+} from "../../core/utils/Errors.js";
 import BookingAssignment from "../bookingAssignment/BookingAssignment.model.js";
 import mongoose from "mongoose";
 import { dispatchBooking } from "../../core/utils/Dispatchservice.js";
@@ -146,7 +150,7 @@ export const fetchBooking = async (bookingId) => {
           select: "firstName lastName phone profileImage email",
         },
       });
-    const PaymentBooking = await getPaymentBooking();
+    const PaymentBooking = await getPaymentBooking(bookingId);
 
     if (!booking) throw new NotFoundError("Booking");
     if (!PaymentBooking) {

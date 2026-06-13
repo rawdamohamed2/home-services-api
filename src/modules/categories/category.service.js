@@ -19,7 +19,7 @@ export const createCategory = async (data) => {
 };
 
 export const getAllCategories = async (filters) => {
-    const { page = 1, limit = 10, isActive, search } = filters;
+    const { page = 1, limit = 20, isActive, search } = filters;
     
     const query = {};
     

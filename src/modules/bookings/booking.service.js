@@ -127,10 +127,12 @@ export const fetchBookings = async (
         .lean(),
       Booking.countDocuments(filter),
     ]);
-
+    console.log(bookings);
     return {
       bookings,
       total,
+      page: parseInt(page),
+      limit: parseInt(limit),
     };
   } catch (err) {
     throw err;

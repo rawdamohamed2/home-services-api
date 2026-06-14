@@ -24,20 +24,29 @@ export const updateReviewSchema = Joi.object({
   comment: Joi.string().trim().max(500).optional().allow(null, ""),
 }).min(1);
 
-// ── Report Comment ─────────────────────────────────────────
+// ── Report Comment (User or Worker) ───────────────────────
 export const reportCommentSchema = Joi.object({
-  reviewId: Joi.string().hex().length(24).required().messages({
-    "string.empty": "Review ID is required",
-  }),
+  reviewId: Joi.string().hex().length(24).required(),
+  
   reason: Joi.string()
-    .valid("spam_or_misleading", "offensive_or_abusive", "fake_review", "other")
-    .required()
-    .messages({ "any.only": "Invalid report reason" }),
-  otherReason: Joi.when("reason", {
-    is:        "other",
-    then:      Joi.string().trim().min(3).max(300).required().messages({ "string.empty": "Please specify the reason" }),
-    otherwise: Joi.string().optional().allow(null, ""),
-  }),
+    .valid("spam_or_misleading", "offensive_or_abusive", "fake_review")
+    .optional(),
+    
+  otherReason: Joi.string().trim().min(3).max(300).optional(),
+}).custom((value, helpers) => {
+
+  if (value.reason) {
+    return value;
+  }
+  if (!value.reason && !value.otherReason) {
+    return helpers.error("any.invalid", {
+      message: "Please select a reason or specify in 'Other'",
+    });
+  }
+  if (value.otherReason) {
+    value.reason = "other";
+  }
+  return value;
 });
 
 // ── Admin: Report action ───────────────────────────────────

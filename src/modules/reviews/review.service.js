@@ -185,21 +185,30 @@ export const reportComment = async (reporterId, { reviewId, reason, otherReason 
   if (review.user._id.toString() === reporterId.toString())
     throw new Error("You cannot report your own comment");
 
-  if (!Object.keys(REASON_MAP).includes(reason))
-    throw new Error("Invalid report reason");
+  let finalReason = reason;
+  let finalOtherReason = null;
 
-  if (reason === "other" && (!otherReason || !otherReason.trim()))
-    throw new Error("Please specify the reason");
+  if (otherReason && !reason) {
+    finalReason = "other";
+    finalOtherReason = otherReason.trim();
+  } else if (reason && !otherReason) {
+    finalReason = reason;
+  } else {
+    throw new Error("Please provide either a reason or specify in 'Other'");
+  }
+
+  if (finalReason === "other" && (!finalOtherReason || finalOtherReason.length < 3)) {
+    throw new Error("Please provide a valid reason in 'Other'");
+  }
 
   return await CommentReport.create({
-    review:        reviewId,
-    reportedBy:    reporterId,
+    review: reviewId,
+    reportedBy: reporterId,
     commentAuthor: review.user._id,
-    reason,
-    otherReason:   reason === "other" ? otherReason.trim() : null,
+    reason: finalReason,
+    otherReason: finalOtherReason,
   });
 };
-
 //  ADMIN — Comment Reports
 
 export const adminGetReports = async (query = {}) => {

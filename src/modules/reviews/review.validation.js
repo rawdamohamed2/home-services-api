@@ -23,11 +23,9 @@ export const updateReviewSchema = Joi.object({
 }).min(1);
 
 //  Report Comment (User or Worker) 
-// ── Report Comment (User or Worker) ───────────────────────
 export const reportCommentSchema = Joi.object({
   reviewId: Joi.string().hex().length(24).required(),
-  
-  // reason مش مطلوب لو otherReason موجود
+
   reason: Joi.string()
     .valid("spam_or_misleading", "offensive_or_abusive", "fake_review")
     .optional(),

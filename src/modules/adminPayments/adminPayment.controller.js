@@ -1,5 +1,5 @@
 import Payment from "../payments/Payment.model.js";
-import UserSubscription from "../subscriptions/UserSubscription.model.js";
+import UserSubscription from "../Subscription Plans/UserSubscription.model.js";
 import Category from "../categories/Category.model.js";
 import mongoose from "mongoose";
 import ApiResponse from "../../core/utils/ApiResponse.js";

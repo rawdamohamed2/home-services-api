@@ -95,6 +95,10 @@ export const initiatePayment = async (userId, bookingId, paymentMethod) => {
   if (booking.status !== "accepted")
     throw new Error("Booking must be accepted before payment");
 
+  if (!booking.worker) {
+    throw new Error("Worker not assigned to this booking");
+  }
+
   const existingPayment = await Payment.findOne({ booking: bookingId });
   if (existingPayment && existingPayment.status === "paid")
     throw new Error("Booking already paid");
@@ -106,13 +110,13 @@ export const initiatePayment = async (userId, bookingId, paymentMethod) => {
   }).sort({ updatedAt: -1 });
 
   const amount = assignment?.finalPrice ?? booking.totalAmount;
-  const platformFee    = Math.round(amount * PLATFORM_FEE_PERCENT * 100) / 100;
+  const platformFee = Math.round(amount * PLATFORM_FEE_PERCENT * 100) / 100;
   const workerEarnings = Math.round((amount - platformFee) * 100) / 100;
 
   const payment = await Payment.create({
     booking: bookingId,
     user: userId,
-    worker: booking.worker._id,
+    worker: booking.worker._id,  
     amount,
     platformFee,
     workerEarnings,
@@ -122,10 +126,9 @@ export const initiatePayment = async (userId, bookingId, paymentMethod) => {
 
   return {
     ...payment.toObject(),
-    workerName: `${booking.worker?.user?.firstName} ${booking.worker?.user?.lastName}`,
+    workerName: `${booking.worker.user?.firstName} ${booking.worker.user?.lastName}`,
     serviceName: booking.service?.name || "N/A",
     scheduledDate: booking.scheduledDate,
-    // instapay instructions
     instapayInstructions: paymentMethod === "instapay" ? {
       recipientName: "ServiGo",
       instapayId: "ServiGo@instapay",

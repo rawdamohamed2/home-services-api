@@ -11,36 +11,21 @@ export const adminGetRevenue = async (req, res, next) => {
 
     const dateFilter = {};
     if (from) dateFilter.$gte = new Date(from);
-    if (to) dateFilter.$lte = new Date(to);
+    if (to)   dateFilter.$lte = new Date(to);
 
     const matchFilter = {
       status: "paid",
       ...(Object.keys(dateFilter).length && { createdAt: dateFilter }),
     };
 
-    const [bookingResult] = await Payment.aggregate([
+    const [result] = await Payment.aggregate([
       { $match: matchFilter },
       {
         $group: {
           _id: null,
           clientPayments:   { $sum: "$amount" },
           workerEarnings:   { $sum: "$workerEarnings" },
-          platformEarnings: { $sum: "$platformFee" },
-        },
-      },
-    ]);
-
-    const subscriptionFilter = {};
-    if (from) subscriptionFilter.createdAt = { $gte: new Date(from) };
-    if (to) subscriptionFilter.createdAt = { ...subscriptionFilter.createdAt, $lte: new Date(to) };
-
-    const [subscriptionResult] = await UserSubscription.aggregate([
-      { $match: subscriptionFilter },
-      {
-        $group: {
-          _id: null,
-          totalSubscriptions: { $sum: "$amountPaid" },
-          subscriptionCount: { $sum: 1 },
+          bookingEarnings:  { $sum: "$platformFee" },  
         },
       },
     ]);
@@ -50,19 +35,27 @@ export const adminGetRevenue = async (req, res, next) => {
       { $group: { _id: null, total: { $sum: "$amount" } } },
     ]);
 
+    // subscription revenue
+    const UserSubscription = mongoose.model("UserSubscription");
+    const [subResult] = await UserSubscription.aggregate([
+      { $match: { status: "active" } },
+      { $group: { _id: null, total: { $sum: "$amountPaid" }, count: { $sum: 1 } } },
+    ]);
+
+    const bookingEarnings   = result?.bookingEarnings   || 0;
+    const subscriptionRevenue = subResult?.total        || 0;
+
     return ApiResponse.success(res, {
-      clientPayments:   bookingResult?.clientPayments   || 0,
-      workerEarnings:   bookingResult?.workerEarnings   || 0,
-      platformEarnings: bookingResult?.platformEarnings || 0,
-      subscriptionRevenue: subscriptionResult?.totalSubscriptions || 0,
-      subscriptionCount:   subscriptionResult?.subscriptionCount || 0,
-      totalPlatformRevenue: (bookingResult?.platformEarnings || 0) + (subscriptionResult?.totalSubscriptions || 0),
-      
-      pending: pendingResult?.total || 0,
+      clientPayments:       result?.clientPayments    || 0,
+      workerEarnings:       result?.workerEarnings    || 0,
+      bookingEarnings,                                    
+      subscriptionRevenue,
+      subscriptionCount:    subResult?.count          || 0,
+      totalPlatformRevenue: bookingEarnings + subscriptionRevenue,
+      pendingBookings:      pendingResult?.total      || 0,  
     });
   } catch (error) { next(error); }
 };
-
 //  ADMIN — Payment History with Search (by name, transactionId, service, category)
 export const adminGetHistory = async (req, res, next) => {
   try {

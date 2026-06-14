@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 import Review from "./Review.model.js";
 import CommentReport from "./CommentReport.model.js";
 import WorkerProfile from "../workers/WorkerProfile.model.js";
-import User from "../users/User.model.js";
+import User from "../users/user.model.js";
 
 //  Helper —  check if user not muted
 

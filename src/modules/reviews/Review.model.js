@@ -17,14 +17,14 @@ const reviewSchema = new mongoose.Schema(
     booking: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Booking",
-      default: null,
+      required: [true, "Booking is required"],
     },
 
     rating: {
       type: Number,
       min: [1, "Rating must be at least 1"],
       max: [5, "Rating cannot exceed 5"],
-      default: null, 
+      default: null,
     },
 
     comment: {
@@ -43,6 +43,7 @@ const reviewSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+
     removalReason: {
       type: String,
       default: null,
@@ -55,7 +56,7 @@ const reviewSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-    toJSON: { virtuals: true },
+    toJSON:   { virtuals: true },
     toObject: { virtuals: true },
   }
 );
@@ -63,19 +64,21 @@ const reviewSchema = new mongoose.Schema(
 reviewSchema.index({ worker: 1, createdAt: -1 });
 reviewSchema.index({ user: 1, worker: 1 });
 
+reviewSchema.index({ user: 1, booking: 1 }, { unique: true });
+
 reviewSchema.statics.calculateAverageRating = async function (workerId) {
   const result = await this.aggregate([
     {
       $match: {
         worker: new mongoose.Types.ObjectId(workerId),
         isRemovedByAdmin: false,
-        rating: { $ne: null }, 
+        rating: { $ne: null },
       },
     },
     {
       $group: {
-        _id: null,
-        avgRating: { $avg: "$rating" },
+        _id:          null,
+        avgRating:    { $avg: "$rating" },
         totalRatings: { $sum: 1 },
       },
     },
@@ -83,12 +86,13 @@ reviewSchema.statics.calculateAverageRating = async function (workerId) {
 
   if (result.length > 0) {
     return {
-      ratingAverage: Math.round(result[0].avgRating * 10) / 10, 
-      totalRatings: result[0].totalRatings,
+      ratingAverage: Math.round(result[0].avgRating * 10) / 10,
+      totalRatings:  result[0].totalRatings,
     };
   }
   return { ratingAverage: 0, totalRatings: 0 };
 };
+
 
 reviewSchema.post("save", async function () {
   const WorkerProfile = mongoose.model("WorkerProfile");

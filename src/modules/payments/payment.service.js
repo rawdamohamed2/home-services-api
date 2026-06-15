@@ -122,12 +122,22 @@ export const deletePaymentMethod = async (userId, methodId) => {
 //  Initiate Payment
 
 export const initiatePayment = async (userId, bookingId, paymentMethod) => {
-  const booking = await Booking.findById(bookingId).populate("service worker");
+  const booking = await Booking.findById(bookingId)
+    .populate("service", "name")
+    .populate({
+      path: "worker",
+      populate: { path: "user", select: "firstName lastName" },
+    });
+
   if (!booking) throw new Error("Booking not found");
   if (booking.user.toString() !== userId.toString())
     throw new Error("Unauthorized");
   if (booking.status !== "accepted")
     throw new Error("Booking must be accepted before payment");
+
+  if (!booking.worker) {
+    throw new Error("Worker not assigned to this booking");
+  }
 
   const existingPayment = await Payment.findOne({ booking: bookingId });
   if (existingPayment && existingPayment.status === "paid")
@@ -143,16 +153,28 @@ export const initiatePayment = async (userId, bookingId, paymentMethod) => {
   const platformFee = Math.round(amount * PLATFORM_FEE_PERCENT * 100) / 100;
   const workerEarnings = Math.round((amount - platformFee) * 100) / 100;
 
-  return await Payment.create({
+  const payment = await Payment.create({
     booking: bookingId,
     user: userId,
-    worker: booking.worker,
+    worker: booking.worker._id,  
     amount,
     platformFee,
     workerEarnings,
     paymentMethod,
     status: paymentMethod === "instapay" ? "pending_verification" : "pending",
   });
+
+  return {
+    ...payment.toObject(),
+    workerName: `${booking.worker.user?.firstName} ${booking.worker.user?.lastName}`,
+    serviceName: booking.service?.name || "N/A",
+    scheduledDate: booking.scheduledDate,
+    instapayInstructions: paymentMethod === "instapay" ? {
+      recipientName: "ServiGo",
+      instapayId: "ServiGo@instapay",
+      amount,
+    } : null,
+  };
 };
 
 //  Confirm Payment

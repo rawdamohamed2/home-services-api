@@ -23,10 +23,8 @@ export const sendFCM = async (fcmToken, { title, body, data = {} }) => {
         payload: { aps: { sound: "default", badge: 1 } },
       },
     };
-    console.log("sendFCM", message);
 
     const response = await messaging.send(message);
-    console.log("sendFCM", response);
 
     return response;
   } catch (err) {
@@ -44,7 +42,7 @@ export const sendFCM = async (fcmToken, { title, body, data = {} }) => {
 
 export const sendFCMBulk = async (fcmTokens, { title, body, data = {} }) => {
   if (!fcmTokens?.length) return { successCount: 0, failureCount: 0 };
-  console.log("sendFCMBulk", fcmTokens);
+
   try {
     const messaging = getFirebaseAdmin().messaging();
 

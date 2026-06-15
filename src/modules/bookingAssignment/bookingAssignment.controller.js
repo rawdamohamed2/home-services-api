@@ -15,7 +15,6 @@ import {
   fetchBookingAssignments,
 } from "./bookingAssignment.service.js";
 
-// ── Worker: view ──────────────────────────────────────────────────────────────
 export const viewAssignment = async (req, res) => {
   try {
     const id = req.params.id;
@@ -32,7 +31,6 @@ export const viewAssignment = async (req, res) => {
   }
 };
 
-// ── Worker: accept at original price ─────────────────────────────────────────
 export const acceptAssignment = async (req, res) => {
   try {
     const id = req.params.id;
@@ -53,7 +51,6 @@ export const acceptAssignment = async (req, res) => {
   }
 };
 
-// ── Worker: reject ────────────────────────────────────────────────────────────
 export const rejectAssignment = async (req, res) => {
   try {
     const { id } = req.params;
@@ -71,7 +68,6 @@ export const rejectAssignment = async (req, res) => {
   }
 };
 
-// ── Worker: counter price ─────────────────────────────────────────────────────
 export const counterAssignment = async (req, res) => {
   try {
     const { counterPrice, note } = req.body;
@@ -89,7 +85,6 @@ export const counterAssignment = async (req, res) => {
   }
 };
 
-// ── User: accept counter price ────────────────────────────────────────────────
 export const userAcceptCounter = async (req, res) => {
   try {
     const id = req.params.id;
@@ -107,7 +102,6 @@ export const userAcceptCounter = async (req, res) => {
   }
 };
 
-// ── User: reject counter price ────────────────────────────────────────────────
 export const userRejectCounter = async (req, res) => {
   try {
     const id = req.params.id;
@@ -121,7 +115,6 @@ export const userRejectCounter = async (req, res) => {
   }
 };
 
-// ── Worker: get my assignments ────────────────────────────────────────────────
 export const getMyAssignments = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -140,7 +133,6 @@ export const getMyAssignments = async (req, res) => {
   }
 };
 
-// ── User/Admin: get all assignments for a booking ─────────────────────────────
 export const getBookingAssignments = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -154,7 +146,6 @@ export const getBookingAssignments = async (req, res) => {
   }
 };
 
-// ── Admin: expire old assignments ─────────────────────────────────────────────
 export const expireAssignments = async (req, res) => {
   try {
     const count = await BookingAssignment.expireOldAssignments();

@@ -51,6 +51,7 @@ const bookingSchema = new mongoose.Schema(
           "completed",
           "cancelled",
           "refunded",
+          "expired",
         ],
         message: "Invalid booking status",
       },

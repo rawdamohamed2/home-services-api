@@ -4,13 +4,18 @@ import PaymentMethod from "./paymentMethod.model.js";
 import Booking from "../bookings/Booking.model.js";
 import BookingAssignment from "../bookingAssignment/BookingAssignment.model.js";
 import Wallet from "../wallet/Wallet.model.js";
-
-const PLATFORM_FEE_PERCENT = 0.1; 
+import {
+  notifyPaymentReceived,
+  notifyPaymentPendingVerification,
+  notifyEarningsPending,
+} from "../notifications/Notification.service.js";
+const PLATFORM_FEE_PERCENT = 0.1;
 
 //  Payment Methods
 
 export const addCardMethod = async (userId, cardData) => {
-  const { cardholderName, cardNumber, expiryMonth, expiryYear, securityCode } = cardData;
+  const { cardholderName, cardNumber, expiryMonth, expiryYear, securityCode } =
+    cardData;
 
   if (!cardNumber || cardNumber.replace(/\s/g, "").length !== 16)
     throw new Error("Invalid card number");
@@ -20,46 +25,75 @@ export const addCardMethod = async (userId, cardData) => {
   const cleanNumber = cardNumber.replace(/\s/g, "");
   const last4Digits = cleanNumber.slice(-4);
   const cardBrand =
-    cleanNumber[0] === "4" ? "Visa" :
-    cleanNumber[0] === "5" ? "Mastercard" : "Unknown";
+    cleanNumber[0] === "4"
+      ? "Visa"
+      : cleanNumber[0] === "5"
+        ? "Mastercard"
+        : "Unknown";
 
   const existing = await PaymentMethod.findOne({
-    owner: userId, ownerType: "user", type: "card",
-    last4Digits, expiryMonth, expiryYear,
+    owner: userId,
+    ownerType: "user",
+    type: "card",
+    last4Digits,
+    expiryMonth,
+    expiryYear,
   });
   if (existing) throw new Error("This card is already added");
 
-  const isFirstMethod = !(await PaymentMethod.findOne({ owner: userId, ownerType: "user" }));
+  const isFirstMethod = !(await PaymentMethod.findOne({
+    owner: userId,
+    ownerType: "user",
+  }));
 
   return await PaymentMethod.create({
-    owner: userId, ownerType: "user", type: "card",
-    cardholderName, last4Digits, cardBrand,
-    expiryMonth, expiryYear,
+    owner: userId,
+    ownerType: "user",
+    type: "card",
+    cardholderName,
+    last4Digits,
+    cardBrand,
+    expiryMonth,
+    expiryYear,
     cardToken: cleanNumber,
     isDefault: isFirstMethod,
   });
 };
 
-export const addInstapayMethod = async (userId, { instapayId, accountHolderName }) => {
+export const addInstapayMethod = async (
+  userId,
+  { instapayId, accountHolderName },
+) => {
   if (!instapayId) throw new Error("InstaPay ID is required");
 
   const existing = await PaymentMethod.findOne({
-    owner: userId, ownerType: "user", type: "instapay", instapayId,
+    owner: userId,
+    ownerType: "user",
+    type: "instapay",
+    instapayId,
   });
   if (existing) throw new Error("This InstaPay account is already added");
 
-  const isFirstMethod = !(await PaymentMethod.findOne({ owner: userId, ownerType: "user" }));
+  const isFirstMethod = !(await PaymentMethod.findOne({
+    owner: userId,
+    ownerType: "user",
+  }));
 
   return await PaymentMethod.create({
-    owner: userId, ownerType: "user", type: "instapay",
-    instapayId, accountHolderName,
+    owner: userId,
+    ownerType: "user",
+    type: "instapay",
+    instapayId,
+    accountHolderName,
     isDefault: isFirstMethod,
   });
 };
 
 export const getUserPaymentMethods = async (userId) => {
   return await PaymentMethod.find({
-    owner: userId, ownerType: "user", isActive: true,
+    owner: userId,
+    ownerType: "user",
+    isActive: true,
   }).sort({ isDefault: -1, createdAt: -1 });
 };
 
@@ -73,9 +107,15 @@ export const deletePaymentMethod = async (userId, methodId) => {
 
   if (wasDefault) {
     const next = await PaymentMethod.findOne({
-      owner: userId, ownerType: "user", isActive: true, _id: { $ne: methodId },
+      owner: userId,
+      ownerType: "user",
+      isActive: true,
+      _id: { $ne: methodId },
     });
-    if (next) { next.isDefault = true; await next.save(); }
+    if (next) {
+      next.isDefault = true;
+      await next.save();
+    }
   }
 };
 
@@ -140,57 +180,110 @@ export const initiatePayment = async (userId, bookingId, paymentMethod) => {
 //  Confirm Payment
 
 export const confirmPayment = async (paymentId, userId) => {
-  const payment = await Payment.findById(paymentId).populate("booking");
+  const payment = await Payment.findById(paymentId).populate({
+    path: "booking",
+    select: "status scheduledDate location totalAmount",
+    populate: [{ path: "service", select: "name category" }],
+  });
+
   if (!payment) throw new Error("Payment not found");
-  if (payment.user.toString() !== userId.toString()) throw new Error("Unauthorized");
+  if (payment.user.toString() !== userId.toString())
+    throw new Error("Unauthorized");
+
+  const serviceName = payment.booking.service.name;
 
   if (payment.paymentMethod === "instapay") {
     if (!payment.aiVerificationResult?.rawResponse)
       throw new Error("Please upload your InstaPay receipt first");
+
     payment.status = "pending_verification";
+    await payment.save();
 
-  } else if (payment.paymentMethod === "card") {
-    payment.status = "paid";
-    await _releasePaymentToWorker(payment);
+    await notifyPaymentPendingVerification(
+      payment.user,
+      {
+        paymentId: payment._id.toString(),
+        bookingId: payment.booking._id.toString(),
+      },
+      { amount: payment.amount, serviceName },
+    );
 
-  } else if (payment.paymentMethod === "cash") {
-    
-    payment.status = "paid";
-    await _deductCashCommissionFromWorker(payment);
+    return payment;
   }
 
-  await payment.save();
-  return payment;
+  if (payment.paymentMethod === "card") {
+    payment.status = "paid";
+    await payment.save();
+    await _releasePaymentToWorker(payment, serviceName);
+
+    await notifyPaymentReceived(
+      payment.user,
+      {
+        paymentId: payment._id.toString(),
+        bookingId: payment.booking._id.toString(),
+      },
+      { amount: payment.amount, serviceName },
+    );
+
+    return payment;
+  }
+
+  if (payment.paymentMethod === "cash") {
+    payment.status = "paid";
+    await payment.save();
+    await _deductCashCommissionFromWorker(payment);
+
+    await notifyPaymentReceived(
+      payment.user,
+      {
+        paymentId: payment._id.toString(),
+        bookingId: payment.booking._id.toString(),
+      },
+      { amount: payment.amount, serviceName },
+    );
+
+    return payment;
+  }
+
+  throw new Error("Invalid payment method");
 };
 
 //  Get Receipt
 
 export const getReceipt = async (paymentId, userId) => {
   const payment = await Payment.findById(paymentId)
-    .populate({ path: "booking", populate: { path: "service", select: "name" } })
+    .populate({
+      path: "booking",
+      populate: { path: "service", select: "name" },
+    })
     .populate("user", "firstName lastName")
-    .populate({ path: "worker", populate: { path: "user", select: "firstName lastName" } });
+    .populate({
+      path: "worker",
+      populate: { path: "user", select: "firstName lastName" },
+    });
 
   if (!payment) throw new Error("Payment not found");
-  if (payment.user._id.toString() !== userId.toString()) throw new Error("Unauthorized");
+  if (payment.user._id.toString() !== userId.toString())
+    throw new Error("Unauthorized");
   if (payment.status !== "paid") throw new Error("Payment not completed yet");
 
   return {
     transactionId: payment.transactionId,
-    service:       payment.booking?.service?.name || "N/A",
-    workerName:    `${payment.worker?.user?.firstName} ${payment.worker?.user?.lastName}`,
-    date:          payment.updatedAt,
-    senderName:    `${payment.user.firstName} ${payment.user.lastName}`,
+    service: payment.booking?.service?.name || "N/A",
+    workerName: `${payment.worker?.user?.firstName} ${payment.worker?.user?.lastName}`,
+    date: payment.updatedAt,
+    senderName: `${payment.user.firstName} ${payment.user.lastName}`,
     paymentMethod: payment.paymentMethod,
-    amount:        payment.amount,
-    adminFee:      payment.platformFee,
+    amount: payment.amount,
+    adminFee: payment.platformFee,
   };
 };
 
 //  Helpers
 
 export const getWorkerWalletByProfileId = async (workerProfileId) => {
-  const workerProfile = await mongoose.model("WorkerProfile")
+  const workerProfile = await mongoose
+    .model("WorkerProfile")
     .findById(workerProfileId)
     .select("user");
 
@@ -199,18 +292,29 @@ export const getWorkerWalletByProfileId = async (workerProfileId) => {
   const wallet = await Wallet.findOne({ owner: workerProfile.user });
   if (!wallet) throw new Error("Worker wallet not found");
 
-  return wallet;
+  return { wallet, workerUserId: workerProfile.user };
 };
 
-const _releasePaymentToWorker = async (payment) => {
-  const wallet = await getWorkerWalletByProfileId(payment.worker);
+const _releasePaymentToWorker = async (payment, serviceName) => {
+  const { wallet, workerUserId } = await getWorkerWalletByProfileId(
+    payment.worker,
+  );
 
   await wallet.credit(payment.workerEarnings, {
     source: "booking_payment",
     referenceId: payment.booking,
     referenceModel: "Booking",
-    note: `Earnings: ${payment.booking.toString().slice(-8)}`,  
+    note: `Earnings: ${payment.booking.toString().slice(-8)}`,
   });
+
+  await notifyEarningsPending(
+    workerUserId,
+    {
+      paymentId: payment._id.toString(),
+      bookingId: payment.booking.toString(),
+    },
+    { amount: payment.workerEarnings, serviceName },
+  );
 };
 
 const _deductCashCommissionFromWorker = async (payment) => {
@@ -223,6 +327,6 @@ const _deductCashCommissionFromWorker = async (payment) => {
     source: "booking_commission",
     referenceId: payment.booking,
     referenceModel: "Booking",
-    note: `Fee: ${payment.booking.toString().slice(-8)}`,  
+    note: `Fee: ${payment.booking.toString().slice(-8)}`,
   });
 };

@@ -18,4 +18,15 @@ export const EVENTS = {
   TRACKING_SUBSCRIBE: "tracking:subscribe",
   TRACKING_UNSUBSCRIBE: "tracking:unsubscribe",
   WORKER_UPDATE_LOCATION: "worker:update_location",
+
+  PAYMENT_RECEIVED: "payment:received",
+  PAYMENT_PENDING: "payment:pending_verification",
+  PAYMENT_FAILED: "payment:failed",
+  PAYMENT_REFUNDED: "payment:refunded",
+  EARNINGS_PENDING: "earnings:pending",
+  EARNINGS_RELEASED: "earnings:released",
+  WITHDRAWAL_REQUESTED: "withdrawal:requested",
+  WITHDRAWAL_APPROVED: "withdrawal:approved",
+  WITHDRAWAL_REJECTED: "withdrawal:rejected",
+  WITHDRAWAL_PAID: "withdrawal:paid",
 };

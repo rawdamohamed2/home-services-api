@@ -1,8 +1,7 @@
 import * as messageService from "./message.service.js";
 import { emitToRoom, emitToUser, isUserOnline } from "../../socket/socket.js";
 import ApiResponse from "../../core/utils/ApiResponse.js";
-import { sendFCM } from "../../core/firebase/fcm.js";
-import { sendNotification } from "../notifications/Notification.service.js";
+import { notifyNewMessage } from "../notifications/Notification.service.js";
 
 export const getMessages = async (req, res) => {
   try {
@@ -47,9 +46,8 @@ export const sendMessage = async (req, res) => {
       if (uid === req.user._id.toString()) continue;
 
       if (!isUserOnline(uid)) {
-        await sendNotification(
+        await notifyNewMessage(
           uid,
-          "new_message",
           { roomId: room._id.toString(), messageId: message._id.toString() },
           { senderName, messageText: req.body.message },
         );

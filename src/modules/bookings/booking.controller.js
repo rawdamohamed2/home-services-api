@@ -9,6 +9,7 @@ import {
   updateBooking,
   updateBookingStatus,
   markBookingComplete,
+  fetchCompletedBookings,
 } from "./booking.service.js";
 import ApiResponse from "../../core/utils/ApiResponse.js";
 
@@ -151,6 +152,16 @@ export const completeBooking = async (req, res) => {
   } catch (err) {
     if (err.isOperational)
       return ApiResponse.error(res, err.message, err.statusCode);
-    return ApiResponse.handleMongooseError(res, err);
+    errorHandler(err, req, res);
+  }
+};
+
+export const getCompletedBookings = async (req, res) => {
+  try {
+    const user = req.user;
+    const bookings = await fetchCompletedBookings(user);
+    return ApiResponse.success(res, bookings);
+  } catch (err) {
+    errorHandler(err, req, res);
   }
 };

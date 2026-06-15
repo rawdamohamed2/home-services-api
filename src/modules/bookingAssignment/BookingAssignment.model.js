@@ -222,15 +222,48 @@ bookingAssignmentSchema.statics.sendToWorkers = async function (
   return await this.insertMany(assignments);
 };
 
+// bookingAssignmentSchema.statics.expireOldAssignments = async function () {
+//   const result = await this.updateMany(
+//     {
+//       status: { $in: ["sent", "viewed", "countered"] },
+//       expiryTime: { $lt: new Date() },
+//     },
+//     { status: "expired" },
+//   );
+//   return result.modifiedCount;
+// };
+
 bookingAssignmentSchema.statics.expireOldAssignments = async function () {
-  const result = await this.updateMany(
-    {
-      status: { $in: ["sent", "viewed", "countered"] },
-      expiryTime: { $lt: new Date() },
-    },
+  const now = new Date();
+
+  const expiredAssignments = await this.find({
+    status: { $in: ["sent", "viewed", "countered"] },
+    expiryTime: { $lt: now },
+  });
+
+  if (expiredAssignments.length === 0) return 0;
+
+  const bookingIds = [...new Set(expiredAssignments.map((a) => a.booking))];
+
+  await this.updateMany(
+    { _id: { $in: expiredAssignments.map((a) => a._id) } },
     { status: "expired" },
   );
-  return result.modifiedCount;
+
+  // 3. التحقق من كل Booking مرتبط بهذه العروض
+  // إذا لم يعد هناك أي عرض بـ status "sent", "viewed", "countered" لنفس الـ booking
+  for (const bId of bookingIds) {
+    const hasActiveAssignments = await this.exists({
+      booking: bId,
+      status: { $in: ["sent", "viewed", "countered"] },
+    });
+
+    if (!hasActiveAssignments) {
+      await Booking.findByIdAndUpdate(bId, { status: "expired" });
+    }
+  }
+
+  return expiredAssignments.length;
 };
 
 // ── Indexes ───────────────────────────────────────────────────────────────────

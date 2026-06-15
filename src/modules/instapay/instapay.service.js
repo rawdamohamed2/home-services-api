@@ -62,6 +62,7 @@ export const getAdminInstapayPayments = async (query = {}) => {
       worker:        `${p.worker?.user?.firstName} ${p.worker?.user?.lastName}`,
       service:       p.booking?.service?.name || "N/A",
       amount:        p.amount,
+      paymentMethod: p.paymentMethod,
       status:        p.status,
       receiptImage:  p.paymentProofImage,
       aiResult: {

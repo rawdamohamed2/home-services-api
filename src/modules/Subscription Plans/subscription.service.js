@@ -1,6 +1,11 @@
 import SubscriptionPlan from "./SubscriptionPlan.model.js";
 import UserSubscription from "./UserSubscription.model.js";
 import PaymentMethod from "../payments/paymentMethod.model.js";
+import {
+  notifySubscriptionStarted,
+  notifySubscriptionCancelled,
+  notifySubscriptionRenewed,
+} from "../notifications/Notification.service.js";
 
 //  USER — Plans
 
@@ -22,7 +27,10 @@ export const getPlanById = async (planId) => {
 
 export const getMySubscriptions = async (userId) => {
   const subscriptions = await UserSubscription.find({ user: userId })
-    .populate("plan", "name description price discount finalPrice image isPremium features")
+    .populate(
+      "plan",
+      "name description price discount finalPrice image isPremium features",
+    )
     .sort({ createdAt: -1 });
 
   for (const sub of subscriptions) {
@@ -63,14 +71,17 @@ export const subscribe = async (userId, { planId, paymentMethodId }) => {
     plan: planId,
     status: "active",
   });
-  if (existingActive) throw new Error("You already have an active subscription for this plan");
+  if (existingActive)
+    throw new Error("You already have an active subscription for this plan");
 
   const startDate = new Date();
   const endDate = new Date(startDate);
   endDate.setMonth(endDate.getMonth() + plan.durationMonths);
 
   const transactionId =
-    "SUB" + Date.now().toString() + Math.random().toString(36).substring(2, 6).toUpperCase();
+    "SUB" +
+    Date.now().toString() +
+    Math.random().toString(36).substring(2, 6).toUpperCase();
 
   const subscription = await UserSubscription.create({
     user: userId,
@@ -84,7 +95,21 @@ export const subscribe = async (userId, { planId, paymentMethodId }) => {
     transactionId,
   });
 
-  return await subscription.populate("plan", "name description price discount finalPrice features");
+  notifySubscriptionStarted(
+    userId,
+    {
+      subscriptionId: subscription._id.toString(),
+      planId: subscription.plan.toString(),
+    },
+    { planName: plan.name },
+  ).catch((err) =>
+    console.error("Failed to send subscription started notification:", err),
+  );
+
+  return await subscription.populate(
+    "plan",
+    "name description price discount finalPrice features",
+  );
 };
 
 //  USER — Cancel
@@ -93,14 +118,28 @@ export const cancelSubscription = async (userId, subscriptionId) => {
   const subscription = await UserSubscription.findOne({
     _id: subscriptionId,
     user: userId,
-  });
+  }).populate("plan", "name ");
 
   if (!subscription) throw new Error("Subscription not found");
   if (!subscription.canCancel()) throw new Error("Subscription is not active");
 
+  const planName = subscription.plan.name;
+  const planId = subscription.plan._id;
+
   await UserSubscription.findByIdAndDelete(subscriptionId);
 
-  return { message: "Subscription cancelled successfully", deletedId: subscriptionId };
+  notifySubscriptionCancelled(
+    userId,
+    { subscriptionId: subscriptionId.toString(), planId: planId.toString() },
+    { planName: planName },
+  ).catch((err) =>
+    console.error("Failed to send subscription cancelled notification:", err),
+  );
+
+  return {
+    message: "Subscription cancelled successfully",
+    deletedId: subscriptionId,
+  };
 };
 
 //  USER — Renew
@@ -112,7 +151,8 @@ export const renewSubscription = async (userId, subscriptionId) => {
   }).populate("plan");
 
   if (!subscription) throw new Error("Subscription not found");
-  if (!subscription.canRenew()) throw new Error("Subscription cannot be renewed — it is still active");
+  if (!subscription.canRenew())
+    throw new Error("Subscription cannot be renewed — it is still active");
 
   const plan = subscription.plan;
   if (!plan.isActive) throw new Error("This plan is no longer available");
@@ -122,14 +162,19 @@ export const renewSubscription = async (userId, subscriptionId) => {
     owner: userId,
     isActive: true,
   });
-  if (!paymentMethod) throw new Error("Original payment method not found. Please subscribe again.");
+  if (!paymentMethod)
+    throw new Error(
+      "Original payment method not found. Please subscribe again.",
+    );
 
   const startDate = new Date();
   const endDate = new Date(startDate);
   endDate.setMonth(endDate.getMonth() + plan.durationMonths);
 
   const transactionId =
-    "SUB" + Date.now().toString() + Math.random().toString(36).substring(2, 6).toUpperCase();
+    "SUB" +
+    Date.now().toString() +
+    Math.random().toString(36).substring(2, 6).toUpperCase();
 
   subscription.status = "active";
   subscription.startDate = startDate;
@@ -140,6 +185,17 @@ export const renewSubscription = async (userId, subscriptionId) => {
   subscription.amountPaid = plan.finalPrice;
   subscription.transactionId = transactionId;
   await subscription.save();
+
+  notifySubscriptionRenewed(
+    userId,
+    {
+      subscriptionId: subscription._id.toString(),
+      planId: plan._id.toString(),
+    },
+    { planName: plan.name },
+  ).catch((err) =>
+    console.error("Failed to send subscription renewed notification:", err),
+  );
 
   return subscription;
 };
@@ -169,8 +225,8 @@ export const adminGetAllPlans = async (query = {}) => {
 };
 
 export const adminGetPlanByName = async (planName) => {
-  const plan = await SubscriptionPlan.findOne({ 
-    name: { $regex: new RegExp(`^${planName}$`, 'i') } 
+  const plan = await SubscriptionPlan.findOne({
+    name: { $regex: new RegExp(`^${planName}$`, "i") },
   });
   if (!plan) throw new Error("Plan not found");
   return plan;
@@ -185,7 +241,7 @@ export const adminUpdatePlan = async (planId, updateData) => {
   if (!plan) throw new Error("Plan not found");
 
   Object.assign(plan, updateData);
-  await plan.save(); 
+  await plan.save();
 
   return plan;
 };
@@ -199,7 +255,9 @@ export const adminDeletePlan = async (planId) => {
     status: "active",
   });
   if (activeCount > 0)
-    throw new Error(`Cannot delete — ${activeCount} active subscription(s) exist`);
+    throw new Error(
+      `Cannot delete — ${activeCount} active subscription(s) exist`,
+    );
 
   await plan.deleteOne();
 };
@@ -228,3 +286,55 @@ export const adminRemoveFeature = async (planId, featureIndex) => {
   return plan;
 };
 
+export const processExpiringSubscriptions = async () => {
+  const targetDate = new Date();
+  targetDate.setDate(targetDate.getDate() + 3);
+
+  const startOfDay = new Date(targetDate.setHours(0, 0, 0, 0));
+  const endOfDay = new Date(targetDate.setHours(23, 59, 59, 999));
+
+  const expiringSubs = await UserSubscription.find({
+    status: "active",
+    endDate: { $gte: startOfDay, $lte: endOfDay },
+  }).populate("plan", "name");
+
+  let count = 0;
+  for (const sub of expiringSubs) {
+    await notifySubscriptionExpiring(
+      sub.user,
+      { subscriptionId: sub._id.toString(), planId: sub.plan._id.toString() },
+      { planName: sub.plan.name, daysLeft: 3 },
+    ).catch((err) =>
+      console.error("Failed to send expiring notification:", err),
+    );
+    count++;
+  }
+
+  return count;
+};
+
+export const processExpiredSubscriptions = async () => {
+  const now = new Date();
+
+  const expiredSubs = await UserSubscription.find({
+    status: "active",
+    endDate: { $lt: now },
+  }).populate("plan", "name");
+
+  let count = 0;
+  for (const sub of expiredSubs) {
+    sub.status = "expired";
+    await sub.save();
+
+    await notifySubscriptionExpired(
+      sub.user,
+      { subscriptionId: sub._id.toString(), planId: sub.plan._id.toString() },
+      { planName: sub.plan.name },
+    ).catch((err) =>
+      console.error("Failed to send expired notification:", err),
+    );
+    count++;
+  }
+
+  return count;
+};

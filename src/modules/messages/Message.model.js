@@ -47,6 +47,12 @@ const messageSchema = new mongoose.Schema(
       },
     ],
 
+    workers: [
+      {
+        category: String,
+        name: String,
+      },
+    ],
     attachments: [
       {
         url: String,

@@ -101,11 +101,11 @@ export const updateBookingValidation = IdBookingValidation.keys({
       details: Joi.string().allow("", null),
     }).required(),
   }).required(),
-});
+}).unknown(false);
 
 export const cancelBookingValidation = IdBookingValidation.keys({
   reason: Joi.string().max(100).allow("", null),
-});
+}).unknown(false);
 
 export const StatusBookingValidation = IdBookingValidation.keys({
   note: Joi.string().max(50).allow("", null),
@@ -124,7 +124,13 @@ export const StatusBookingValidation = IdBookingValidation.keys({
         "status must be one of pending, accepted, in-progress, completed, cancelled, refunded",
     })
     .required(),
-});
+}).unknown(false);
+
 export const BookingCompletedSchema = Joi.object({
   bookingId: objectIdRule.required(),
+}).unknown(false);
+
+export const BookingUpdatedFareSchema = Joi.object({
+  id: objectIdRule.required(),
+  newPrice: Joi.number().min(0).required(),
 }).unknown(false);

@@ -35,8 +35,14 @@ export const dispatchBooking = async (bookingId) => {
     })),
   );
 
-  workers.map((w) =>
-    notifyNewOffer(
+  const notifyPromises = workers.map((w) => {
+    const workerAssignment = assignments.find(
+      (a) => a.worker.toString() === w.workerId.toString(),
+    );
+
+    if (!workerAssignment) return Promise.resolve();
+
+    return notifyNewOffer(
       w.workerUserId,
       {
         serviceName: booking.service?.name,
@@ -44,13 +50,15 @@ export const dispatchBooking = async (bookingId) => {
         booking_id: booking._id,
         location: booking.location,
         scheduledDate: booking.scheduledDate,
+        assignment_id: workerAssignment._id,
       },
       {
         serviceName: booking.service?.name,
         price: booking.totalAmount,
       },
-    ),
-  );
+    ).catch((err) => console.error("Failed to notify worker:", err));
+  });
+  await Promise.all(notifyPromises);
 
   return {
     dispatched: true,

@@ -12,11 +12,13 @@ import {
   getBookingTimeline,
   completeBooking,
   getCompletedBookings,
+  updateFare,
 } from "./booking.controller.js";
 import { authorize } from "../../core/middleware/roleMiddleware.js";
 import { validate } from "../../core/middleware/validate.js";
 import {
   BookingCompletedSchema,
+  BookingUpdatedFareSchema,
   cancelBookingValidation,
   createBookingValidation,
   IdBookingValidation,
@@ -56,6 +58,13 @@ bookingRouter.get(
   //checkPermissionAndRole("user", "manage_bookings"),
   validate(IdBookingValidation),
   getBooking,
+);
+
+bookingRouter.patch(
+  "/:id/fare",
+  authorize("user"),
+  validate(BookingUpdatedFareSchema),
+  updateFare,
 );
 
 bookingRouter.patch(

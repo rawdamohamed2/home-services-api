@@ -175,7 +175,7 @@ async function _buildBotContext() {
 async function _callBotAPI(userMessage, contextData, history) {
   try {
     console.log(" _callBotAPI ", contextData);
-    const response = await fetch(AI_API_URL, {
+    const response = await fetch(process.env.AI_API_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -203,42 +203,42 @@ async function _callBotAPI(userMessage, contextData, history) {
 
 export const generateBotReply = async (room, userMessage) => {
   try {
-    // 1. Conversation history
     const history = await Message.find({ chatRoom: room._id, isDeleted: false })
       .sort("-createdAt")
       .limit(12)
       .lean();
 
     const formattedHistory = history.reverse().map((m) => ({
-      role: m.sender.toString() === BOT_ID ? "assistant" : "user",
+      role: m.sender.toString() === process.env.BOT_ID ? "assistant" : "user",
       content: m.message,
     }));
 
-    // 2. Context من الـ DB
     const contextData = await _buildBotContext();
 
-    // 3. Call API
     const apiResult = await _callBotAPI(
       userMessage,
       contextData,
       formattedHistory,
     );
-    console.log(apiResult);
-    // 4. بناء الـ reply وال quickReplies
+
     const { replyText, quickReplies } = _buildReply(
       apiResult,
       userMessage,
       contextData,
     );
+    const workers = apiResult.data;
 
-    // 5. حفظ رسالة البوت
     const botMessage = await Message.create({
       chatRoom: room._id,
       sender: BOT_ID,
       senderType: "bot",
       message: replyText,
       messageType: "text",
-      quickReplies: quickReplies.map((qr) => ({ title: qr, payload: qr })),
+      quickReplies: quickReplies.map((qr) => ({
+        title: qr,
+        payload: qr,
+      })),
+      workers: workers || null,
     });
 
     return botMessage;

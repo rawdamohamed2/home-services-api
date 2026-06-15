@@ -12,6 +12,7 @@ import {
   fetchCompletedBookings,
 } from "./booking.service.js";
 import ApiResponse from "../../core/utils/ApiResponse.js";
+import * as bookingService from "./booking.service.js";
 
 export const createBooking = async (req, res) => {
   try {
@@ -161,6 +162,31 @@ export const getCompletedBookings = async (req, res) => {
     const user = req.user;
     const bookings = await fetchCompletedBookings(user);
     return ApiResponse.success(res, bookings);
+  } catch (err) {
+    errorHandler(err, req, res);
+  }
+};
+
+export const updateFare = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { newPrice } = req.body;
+    const userId = req.user._id;
+
+    const updatedBooking = await bookingService.updateBookingPrice(
+      userId,
+      id,
+      newPrice,
+    );
+
+    return ApiResponse.success(
+      res,
+      {
+        bookingId: updatedBooking._id,
+        newPrice: updatedBooking.price,
+      },
+      "Fare updated successfully and workers notified.",
+    );
   } catch (err) {
     errorHandler(err, req, res);
   }

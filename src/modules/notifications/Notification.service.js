@@ -55,12 +55,11 @@ const MESSAGES = {
       `You've been assigned to ${d.serviceName} on ${d.scheduledDate}.`,
   },
 
-  // ── Chat ─────────────────────────────────────────────────────────
   new_message: {
     title: (d) => d.senderName,
     body: (d) => d.messageText,
   },
-  // ── Support Tickets ──────────────────────────────────────────────
+
   ticket_assigned: {
     title: "Ticket Assigned",
     body: (d) =>
@@ -75,55 +74,39 @@ const MESSAGES = {
     body: (d) => `Your support ticket "${d.subject}" has been closed.`,
   },
 
-  // ═══════════════════════════════════════════════════════════════
-  // ── Payments ─────────────────────────────────────────────────────
-  // ═══════════════════════════════════════════════════════════════
-
-  // المستخدم دفع بنجاح (card/instapay confirmed)
   payment_received: {
     title: "Payment Successful",
     body: (d) =>
       `Your payment of ${d.amount} L.E for ${d.serviceName} was successful.`,
   },
 
-  // المستخدم رفع proof صورة وفي انتظار مراجعة الأدمن
   payment_pending_verification: {
     title: "Payment Under Review",
     body: (d) =>
       `Your payment of ${d.amount} L.E for ${d.serviceName} is being verified. We'll notify you once approved.`,
   },
-
-  // الدفع فشل (card declined, AI verification failed, etc.)
   payment_failed: {
     title: "Payment Failed",
     body: (d) =>
       `Your payment of ${d.amount} L.E for ${d.serviceName} failed. Please try again.`,
   },
-
-  // تم رد المبلغ
   payment_refunded: {
     title: "Payment Refunded",
     body: (d) =>
       `${d.amount} L.E has been refunded to you for ${d.serviceName}.${d.reason ? ` Reason: ${d.reason}` : ""}`,
   },
 
-  // ── Earnings (Worker side) ─────────────────────────────────────────
-
-  // العامل خلص شغلانة — الفلوس وقعت pending في محفظته
   earnings_pending: {
     title: "Earnings Pending",
     body: (d) =>
       `You earned ${d.amount} L.E from ${d.serviceName}. It will be available after admin approval.`,
   },
-
-  // الأدمن وافق على الدفعة — الفلوس بقت في الـ balance
   earnings_released: {
     title: "Earnings Released",
     body: (d) =>
       `${d.amount} L.E from ${d.serviceName} has been added to your wallet balance.`,
   },
 
-  // ── Wallet ───────────────────────────────────────────────────────
   wallet_credited: {
     title: "Wallet Credited",
     body: (d) => `${d.amount} L.E added to your wallet.`,
@@ -132,8 +115,6 @@ const MESSAGES = {
     title: "Wallet Debited",
     body: (d) => `${d.amount} L.E deducted from your wallet.`,
   },
-
-  // ── Withdrawals (Worker side) ───────────────────────────────────────
 
   withdrawal_requested: {
     title: "Withdrawal Requested",
@@ -155,6 +136,45 @@ const MESSAGES = {
     body: (d) =>
       `${d.amount} L.E has been transferred to your ${d.method === "instapay" ? "InstaPay" : "card"} account.`,
   },
+
+  review_received: {
+    title: "New Review Received!",
+    body: (d) =>
+      `${d.userName} left a ${d.rating}-star review for your service.`,
+  },
+  comment_removed: {
+    title: "Comment Removed",
+    body: (d) =>
+      `Your comment has been removed by an admin. Reason: ${d.reason}.`,
+  },
+  user_muted: {
+    title: "Account Muted",
+    body: (d) =>
+      `You have been muted for 7 days due to community guidelines violations. Reason: ${d.reason}.`,
+  },
+
+  subscription_started: {
+    title: "Subscription Active!",
+    body: (d) => `You have successfully subscribed to the ${d.planName} plan.`,
+  },
+  subscription_cancelled: {
+    title: "Subscription Cancelled",
+    body: (d) => `Your ${d.planName} subscription has been cancelled.`,
+  },
+  subscription_renewed: {
+    title: "Subscription Renewed",
+    body: (d) =>
+      `Your ${d.planName} subscription has been successfully renewed.`,
+  },
+  subscription_expiring: {
+    title: "Subscription Expiring Soon",
+    body: (d) =>
+      `Your ${d.planName} plan expires in ${d.daysLeft} days. Renew now to keep your benefits!`,
+  },
+  subscription_expired: {
+    title: "Subscription Expired",
+    body: (d) => `Your ${d.planName} plan has expired. Please subscribe again.`,
+  },
 };
 
 const SOCKET_EVENT_MAP = {
@@ -167,12 +187,13 @@ const SOCKET_EVENT_MAP = {
   booking_completed: EVENTS.BOOKING_COMPLETED,
   booking_offer_updated: EVENTS.BOOKING_UPDATED,
   worker_assigned: EVENTS.WORKER_ASSIGNED,
+
   new_message: EVENTS.NEW_MESSAGE,
+
   ticket_assigned: EVENTS.NOTIFICATION,
   ticket_resolved: EVENTS.NOTIFICATION,
   ticket_closed: EVENTS.NOTIFICATION,
 
-  // ── Payments ──────────────────────────────────────────────────
   payment_received: EVENTS.PAYMENT_RECEIVED,
   payment_pending_verification: EVENTS.PAYMENT_PENDING,
   payment_failed: EVENTS.PAYMENT_FAILED,
@@ -185,6 +206,16 @@ const SOCKET_EVENT_MAP = {
   withdrawal_approved: EVENTS.WITHDRAWAL_APPROVED,
   withdrawal_rejected: EVENTS.WITHDRAWAL_REJECTED,
   withdrawal_paid: EVENTS.WITHDRAWAL_PAID,
+
+  review_received: EVENTS.REVIEW_RECEIVED,
+  comment_removed: EVENTS.COMMENT_REMOVED,
+  user_muted: EVENTS.USER_MUTED,
+
+  subscription_started: EVENTS.SUBSCRIPTION_STARTED,
+  subscription_cancelled: EVENTS.SUBSCRIPTION_CANCELLED,
+  subscription_renewed: EVENTS.SUBSCRIPTION_RENEWED,
+  subscription_expiring: EVENTS.SUBSCRIPTION_EXPIRING,
+  subscription_expired: EVENTS.SUBSCRIPTION_EXPIRED,
 };
 
 export const sendNotification = async (
@@ -291,37 +322,24 @@ export const notifyTicketResolved = (u, d, m) =>
 export const notifyTicketClosed = (u, d, m) =>
   sendNotification(u, "ticket_closed", d, m);
 
-// User: payment تم بنجاح
 export const notifyPaymentReceived = (u, d, m) =>
   sendNotification(u, "payment_received", d, m);
-
-// User: payment proof تحت المراجعة
 export const notifyPaymentPendingVerification = (u, d, m) =>
   sendNotification(u, "payment_pending_verification", d, m);
-
-// User: payment فشل
 export const notifyPaymentFailed = (u, d, m) =>
   sendNotification(u, "payment_failed", d, m);
-
-// User: payment تم رده
 export const notifyPaymentRefunded = (u, d, m) =>
   sendNotification(u, "payment_refunded", d, m);
-
-// Worker: فلوس pending بعد إكمال البوكينج
 export const notifyEarningsPending = (u, d, m) =>
   sendNotification(u, "earnings_pending", d, m);
-
-// Worker: الأدمن وافق على الدفعة → الفلوس بقت available
 export const notifyEarningsReleased = (u, d, m) =>
   sendNotification(u, "earnings_released", d, m);
 
-// Wallet
 export const notifyWalletCredited = (u, d, m) =>
   sendNotification(u, "wallet_credited", d, m);
 export const notifyWalletDebited = (u, d, m) =>
   sendNotification(u, "wallet_debited", d, m);
 
-// ── Withdrawals (Worker side) ───────────────────────────────────────
 export const notifyWithdrawalRequested = (u, d, m) =>
   sendNotification(u, "withdrawal_requested", d, m);
 export const notifyWithdrawalApproved = (u, d, m) =>
@@ -330,3 +348,21 @@ export const notifyWithdrawalRejected = (u, d, m) =>
   sendNotification(u, "withdrawal_rejected", d, m);
 export const notifyWithdrawalPaid = (u, d, m) =>
   sendNotification(u, "withdrawal_paid", d, m);
+
+export const notifyReviewReceived = (u, d, m) =>
+  sendNotification(u, "review_received", d, m);
+export const notifyCommentRemoved = (u, d, m) =>
+  sendNotification(u, "comment_removed", d, m);
+export const notifyUserMuted = (u, d, m) =>
+  sendNotification(u, "user_muted", d, m);
+
+export const notifySubscriptionStarted = (u, d, m) =>
+  sendNotification(u, "subscription_started", d, m);
+export const notifySubscriptionCancelled = (u, d, m) =>
+  sendNotification(u, "subscription_cancelled", d, m);
+export const notifySubscriptionRenewed = (u, d, m) =>
+  sendNotification(u, "subscription_renewed", d, m);
+export const notifySubscriptionExpiring = (u, d, m) =>
+  sendNotification(u, "subscription_expiring", d, m);
+export const notifySubscriptionExpired = (u, d, m) =>
+  sendNotification(u, "subscription_expired", d, m);

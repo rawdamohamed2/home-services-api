@@ -4,6 +4,10 @@ import {
   processFailedRetries,
   processPendingScheduled,
 } from "../../modules/AdminNotification/Adminnotification.service.js";
+import {
+  processExpiringSubscriptions,
+  processExpiredSubscriptions,
+} from "../../modules/Subscription Plans/Subscription.service.js";
 
 export const startCronJobs = () => {
   // Every 5 min — expire stale assignments
@@ -37,6 +41,24 @@ export const startCronJobs = () => {
         console.log(`[CRON]  Retried ${count} failed notification(s)`);
     } catch (err) {
       console.error("[CRON]  retry notifications:", err.message);
+    }
+  });
+
+  cron.schedule("0 0 * * *", async () => {
+    try {
+      const expiringCount = await processExpiringSubscriptions();
+      const expiredCount = await processExpiredSubscriptions();
+
+      if (expiringCount > 0)
+        console.log(
+          `[CRON]  Notified ${expiringCount} expiring subscription(s)`,
+        );
+      if (expiredCount > 0)
+        console.log(
+          `[CRON]  Processed ${expiredCount} expired subscription(s)`,
+        );
+    } catch (err) {
+      console.error("[CRON]  subscriptions processing:", err.message);
     }
   });
 

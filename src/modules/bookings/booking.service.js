@@ -498,3 +498,58 @@ export const fetchCompletedBookings = async (user) => {
     throw e;
   }
 };
+
+export const updateBookingPrice = async (userId, bookingId, newPrice) => {
+  try {
+    const booking = await Booking.findOne({
+      _id: bookingId,
+      user: userId,
+    }).populate("service", "name category");
+
+    if (!booking) {
+      throw new NotFoundError("Booking not found");
+    }
+
+    if (booking.status !== "pending" && booking.status !== "searching") {
+      throw new Error("You can only update the price for pending bookings");
+    }
+
+    booking.price = newPrice;
+    await booking.save();
+
+    await BookingAssignment.updateMany(
+      {
+        booking: bookingId,
+        status: { $in: ["sent", "viewed"] },
+      },
+      {
+        $set: { originalPrice: newPrice },
+      },
+    );
+
+    const activeAssignments = await BookingAssignment.find({
+      booking: bookingId,
+      status: { $in: ["sent", "viewed", "countered"] },
+    }).populate("worker");
+
+    if (activeAssignments.length > 0) {
+      const notifyPromises = activeAssignments.map((assignment) => {
+        return notifyBookingUpdated(
+          assignment.worker.user,
+          {
+            booking_id: booking._id.toString(),
+            new_price: newPrice,
+            type: "price_update",
+          },
+          { serviceName: booking.service.name || "Service" },
+        );
+      });
+
+      await Promise.all(notifyPromises);
+    }
+
+    return booking;
+  } catch (e) {
+    throw e;
+  }
+};

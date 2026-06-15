@@ -60,7 +60,7 @@ export const sendMessage = async (req, res) => {
           room,
           data.message,
         );
-
+        console.log(botMessage);
         emitToUser(req.user._id, "message:new", {
           roomId: room._id,
           message: botMessage,

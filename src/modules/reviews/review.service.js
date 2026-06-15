@@ -3,8 +3,11 @@ import Review from "./Review.model.js";
 import CommentReport from "./CommentReport.model.js";
 import WorkerProfile from "../workers/WorkerProfile.model.js";
 import User from "../users/user.model.js";
-
-//  Helper —  check if user not muted
+import {
+  notifyReviewReceived,
+  notifyCommentRemoved,
+  notifyUserMuted,
+} from "../notifications/Notification.service.js";
 
 const checkNotMuted = async (userId) => {
   const user = await User.findById(userId).select("isMuted mutedUntil");
@@ -13,13 +16,12 @@ const checkNotMuted = async (userId) => {
   if (user.isMuted && user.mutedUntil) {
     if (user.mutedUntil > new Date()) {
       const remainingDays = Math.ceil(
-        (user.mutedUntil - new Date()) / (1000 * 60 * 60 * 24)
+        (user.mutedUntil - new Date()) / (1000 * 60 * 60 * 24),
       );
       throw new Error(
-        `You are muted and cannot post comments for ${remainingDays} more day(s)`
+        `You are muted and cannot post comments for ${remainingDays} more day(s)`,
       );
     } else {
-      
       user.isMuted = false;
       user.mutedUntil = null;
       await user.save();
@@ -29,17 +31,23 @@ const checkNotMuted = async (userId) => {
 
 //  USER — Create Review
 
-export const createReview = async (userId, { workerId, bookingId, rating, comment }) => {
+export const createReview = async (
+  userId,
+  { workerId, bookingId, rating, comment },
+) => {
   await checkNotMuted(userId);
 
   if (!bookingId) throw new Error("Booking ID is required to submit a review");
 
   const Booking = mongoose.model("Booking");
-  const booking = await Booking.findById(bookingId);
+  const booking = await Booking.findById(bookingId).populate(
+    "user",
+    "firstName lastName",
+  );
 
   if (!booking) throw new Error("Booking not found");
 
-  if (booking.user.toString() !== userId.toString())
+  if (booking?.user._id.toString() !== userId.toString())
     throw new Error("This booking does not belong to you");
 
   if (booking.worker.toString() !== workerId.toString())
@@ -48,20 +56,36 @@ export const createReview = async (userId, { workerId, bookingId, rating, commen
   if (booking.status !== "completed")
     throw new Error("You can only review completed bookings");
 
-  const existingReview = await Review.findOne({ user: userId, booking: bookingId });
-  if (existingReview)
-    throw new Error("You have already reviewed this booking");
+  const existingReview = await Review.findOne({
+    user: userId,
+    booking: bookingId,
+  });
+  if (existingReview) throw new Error("You have already reviewed this booking");
 
   const worker = await WorkerProfile.findById(workerId);
   if (!worker) throw new Error("Worker not found");
 
-  return await Review.create({
+  const review = await Review.create({
     user: userId,
     worker: workerId,
     booking: bookingId,
-    rating:  rating  || null,
+    rating: rating || null,
     comment: comment || null,
   });
+
+  notifyReviewReceived(
+    worker.user,
+    {
+      review_id: review._id.toString(),
+      booking_id: bookingId.toString(),
+      rating: rating,
+    },
+    {
+      userName: `${booking?.user.firstName} ${booking?.user.lastName}`,
+      rating: rating,
+    },
+  ).catch((err) => console.error("Failed to send review notification:", err));
+  return review;
 };
 
 //  USER — Update Review
@@ -74,7 +98,7 @@ export const updateReview = async (userId, reviewId, { rating, comment }) => {
   if (review.isRemovedByAdmin)
     throw new Error("This comment was removed by admin and cannot be edited");
 
-  if (rating  !== undefined) review.rating  = rating;
+  if (rating !== undefined) review.rating = rating;
   if (comment !== undefined) review.comment = comment;
   review.editedAt = new Date();
 
@@ -109,7 +133,8 @@ export const getWorkerReviews = async (workerId, query = {}) => {
     Review.countDocuments(filter),
   ]);
 
-  const { ratingAverage, totalRatings } = await Review.calculateAverageRating(workerId);
+  const { ratingAverage, totalRatings } =
+    await Review.calculateAverageRating(workerId);
 
   return {
     ratingAverage,
@@ -143,7 +168,9 @@ export const getMyProfileReviews = async (workerUserId, query = {}) => {
     Review.countDocuments(filter),
   ]);
 
-  const { ratingAverage, totalRatings } = await Review.calculateAverageRating(workerProfile._id);
+  const { ratingAverage, totalRatings } = await Review.calculateAverageRating(
+    workerProfile._id,
+  );
 
   return {
     ratingAverage,
@@ -159,7 +186,10 @@ export const toggleHideComment = async (workerUserId, reviewId, hide) => {
   const workerProfile = await WorkerProfile.findOne({ user: workerUserId });
   if (!workerProfile) throw new Error("Worker profile not found");
 
-  const review = await Review.findOne({ _id: reviewId, worker: workerProfile._id });
+  const review = await Review.findOne({
+    _id: reviewId,
+    worker: workerProfile._id,
+  });
   if (!review) throw new Error("Review not found");
 
   review.isHiddenByWorker = hide;
@@ -170,13 +200,16 @@ export const toggleHideComment = async (workerUserId, reviewId, hide) => {
 //  Report Comment (User or Worker)
 
 const REASON_MAP = {
-  spam_or_misleading:    "Spam or misleading",
-  offensive_or_abusive:  "Offensive or abusive language",
-  fake_review:           "Fake review",
-  other:                 "Other",
+  spam_or_misleading: "Spam or misleading",
+  offensive_or_abusive: "Offensive or abusive language",
+  fake_review: "Fake review",
+  other: "Other",
 };
 
-export const reportComment = async (reporterId, { reviewId, reason, otherReason }) => {
+export const reportComment = async (
+  reporterId,
+  { reviewId, reason, otherReason },
+) => {
   await checkNotMuted(reporterId);
 
   const review = await Review.findById(reviewId).populate("user", "_id");
@@ -197,7 +230,10 @@ export const reportComment = async (reporterId, { reviewId, reason, otherReason 
     throw new Error("Please provide either a reason or specify in 'Other'");
   }
 
-  if (finalReason === "other" && (!finalOtherReason || finalOtherReason.length < 3)) {
+  if (
+    finalReason === "other" &&
+    (!finalOtherReason || finalOtherReason.length < 3)
+  ) {
     throw new Error("Please provide a valid reason in 'Other'");
   }
 
@@ -222,26 +258,40 @@ export const adminGetReports = async (query = {}) => {
       .populate("commentAuthor", "firstName lastName");
 
     const filtered = allReports.filter((r) => {
-      const idMatch      = r._id.toString().includes(search);
-      const authorName   = `${r.commentAuthor?.firstName} ${r.commentAuthor?.lastName}`.toLowerCase();
-      const reporterName = `${r.reportedBy?.firstName} ${r.reportedBy?.lastName}`.toLowerCase();
-      return idMatch || authorName.includes(search.toLowerCase()) || reporterName.includes(search.toLowerCase());
+      const idMatch = r._id.toString().includes(search);
+      const authorName =
+        `${r.commentAuthor?.firstName} ${r.commentAuthor?.lastName}`.toLowerCase();
+      const reporterName =
+        `${r.reportedBy?.firstName} ${r.reportedBy?.lastName}`.toLowerCase();
+      return (
+        idMatch ||
+        authorName.includes(search.toLowerCase()) ||
+        reporterName.includes(search.toLowerCase())
+      );
     });
 
-    const total  = filtered.length;
-    const start  = (page - 1) * limit;
-    const paged  = filtered.slice(start, start + Number(limit));
+    const total = filtered.length;
+    const start = (page - 1) * limit;
+    const paged = filtered.slice(start, start + Number(limit));
 
     return {
-      reports:    paged.map(formatReportSummary),
-      pagination: { total, page: Number(page), pages: Math.ceil(total / limit) },
+      reports: paged.map(formatReportSummary),
+      pagination: {
+        total,
+        page: Number(page),
+        pages: Math.ceil(total / limit),
+      },
     };
   }
 
   const [reports, total] = await Promise.all([
     CommentReport.find(filter)
-      .populate({ path: "review", select: "comment user worker", populate: { path: "user", select: "firstName lastName" } })
-      .populate("reportedBy",    "firstName lastName")
+      .populate({
+        path: "review",
+        select: "comment user worker",
+        populate: { path: "user", select: "firstName lastName" },
+      })
+      .populate("reportedBy", "firstName lastName")
       .populate("commentAuthor", "firstName lastName")
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
@@ -250,44 +300,56 @@ export const adminGetReports = async (query = {}) => {
   ]);
 
   return {
-    reports:    reports.map(formatReportSummary),
+    reports: reports.map(formatReportSummary),
     pagination: { total, page: Number(page), pages: Math.ceil(total / limit) },
   };
 };
 
 const formatReportSummary = (r) => ({
-  _id:             r._id,
-  reason:          REASON_MAP[r.reason],
-  reasonKey:       r.reason,
+  _id: r._id,
+  reason: REASON_MAP[r.reason],
+  reasonKey: r.reason,
   originalComment: r.review?.comment || "[Comment deleted]",
-  author:          r.commentAuthor ? `${r.commentAuthor.firstName} ${r.commentAuthor.lastName}` : "Unknown",
-  reportedBy:      r.reportedBy    ? `${r.reportedBy.firstName} ${r.reportedBy.lastName}`       : "Unknown",
-  submittedAt:     r.createdAt,
-  status:          r.status,
+  author: r.commentAuthor
+    ? `${r.commentAuthor.firstName} ${r.commentAuthor.lastName}`
+    : "Unknown",
+  reportedBy: r.reportedBy
+    ? `${r.reportedBy.firstName} ${r.reportedBy.lastName}`
+    : "Unknown",
+  submittedAt: r.createdAt,
+  status: r.status,
 });
 
 export const adminGetReportById = async (reportId) => {
   const report = await CommentReport.findById(reportId)
-    .populate({ path: "review", select: "comment user worker rating", populate: { path: "user", select: "firstName lastName" } })
-    .populate("reportedBy",    "firstName lastName")
+    .populate({
+      path: "review",
+      select: "comment user worker rating",
+      populate: { path: "user", select: "firstName lastName" },
+    })
+    .populate("reportedBy", "firstName lastName")
     .populate("commentAuthor", "firstName lastName");
 
   if (!report) throw new Error("Report not found");
 
   return {
-    _id:             report._id,
-    reason:          REASON_MAP[report.reason],
-    reasonKey:       report.reason,
-    otherReason:     report.otherReason,
+    _id: report._id,
+    reason: REASON_MAP[report.reason],
+    reasonKey: report.reason,
+    otherReason: report.otherReason,
     originalComment: report.review?.comment || "[Comment deleted]",
-    commentRating:   report.review?.rating,
-    commentAuthor:   report.commentAuthor ? `${report.commentAuthor.firstName} ${report.commentAuthor.lastName}` : "Unknown",
+    commentRating: report.review?.rating,
+    commentAuthor: report.commentAuthor
+      ? `${report.commentAuthor.firstName} ${report.commentAuthor.lastName}`
+      : "Unknown",
     commentAuthorId: report.commentAuthor?._id,
-    reportedBy:      report.reportedBy    ? `${report.reportedBy.firstName} ${report.reportedBy.lastName}`       : "Unknown",
-    submittedAt:     report.createdAt,
-    status:          report.status,
-    adminNotes:      report.adminNotes,
-    reviewId:        report.review?._id,
+    reportedBy: report.reportedBy
+      ? `${report.reportedBy.firstName} ${report.reportedBy.lastName}`
+      : "Unknown",
+    submittedAt: report.createdAt,
+    status: report.status,
+    adminNotes: report.adminNotes,
+    reviewId: report.review?._id,
   };
 };
 
@@ -296,7 +358,7 @@ export const adminIgnoreReport = async (reportId, adminId, notes) => {
   if (!report) throw new Error("Report not found");
   if (report.status !== "pending") throw new Error("Report already reviewed");
 
-  report.status     = "ignored";
+  report.status = "ignored";
   report.adminNotes = notes || null;
   report.reviewedBy = adminId;
   report.reviewedAt = new Date();
@@ -313,14 +375,23 @@ export const adminRemoveComment = async (reportId, adminId, notes) => {
   if (!review) throw new Error("Review not found");
 
   review.isRemovedByAdmin = true;
-  review.removalReason    = report.reason;
+  review.removalReason = report.reason;
   await review.save();
 
-  report.status     = "comment_removed";
+  report.status = "comment_removed";
   report.adminNotes = notes || null;
   report.reviewedBy = adminId;
   report.reviewedAt = new Date();
   await report.save();
+
+  notifyCommentRemoved(
+    review.user,
+    { review_id: review._id.toString() },
+    { reason: REASON_MAP[report.reason] || report.reason },
+  ).catch((err) =>
+    console.error("Failed to send remove comment notification:", err),
+  );
+
   return report;
 };
 
@@ -332,12 +403,24 @@ export const adminMuteUser = async (reportId, adminId, notes) => {
   const mutedUntil = new Date();
   mutedUntil.setDate(mutedUntil.getDate() + 7);
 
-  await User.findByIdAndUpdate(report.commentAuthor, { isMuted: true, mutedUntil });
+  await User.findByIdAndUpdate(report.commentAuthor, {
+    isMuted: true,
+    mutedUntil,
+  });
 
-  report.status     = "user_muted";
+  report.status = "user_muted";
   report.adminNotes = notes || null;
   report.reviewedBy = adminId;
   report.reviewedAt = new Date();
   await report.save();
+
+  notifyUserMuted(
+    report.commentAuthor,
+    { report_id: report._id.toString() },
+    { reason: REASON_MAP[report.reason] || report.reason },
+  ).catch((err) =>
+    console.error("Failed to send user muted notification:", err),
+  );
+
   return report;
 };

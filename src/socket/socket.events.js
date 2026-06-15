@@ -29,4 +29,14 @@ export const EVENTS = {
   WITHDRAWAL_APPROVED: "withdrawal:approved",
   WITHDRAWAL_REJECTED: "withdrawal:rejected",
   WITHDRAWAL_PAID: "withdrawal:paid",
+
+  REVIEW_RECEIVED: "review:received",
+  COMMENT_REMOVED: "review:comment_removed",
+  USER_MUTED: "user:muted",
+
+  SUBSCRIPTION_STARTED: "subscription:started",
+  SUBSCRIPTION_CANCELLED: "subscription:cancelled",
+  SUBSCRIPTION_RENEWED: "subscription:renewed",
+  SUBSCRIPTION_EXPIRING: "subscription:expiring",
+  SUBSCRIPTION_EXPIRED: "subscription:expired",
 };

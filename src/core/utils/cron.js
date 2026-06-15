@@ -7,7 +7,7 @@ import {
 import {
   processExpiringSubscriptions,
   processExpiredSubscriptions,
-} from "../../modules/Subscription Plans/Subscription.service.js";
+} from "../../modules/SubscriptionPlans/subscription.service.js";
 
 export const startCronJobs = () => {
   // Every 5 min — expire stale assignments

@@ -25,11 +25,11 @@ import userWalletRouter from "./modules/wallet/userWallet.route.js";
 import withdrawalAdminRouter from "./modules/withdrawals/withdrawalAdmin.route.js";
 import instapayRouter from "./modules/instapay/instapay.route.js";
 import adminPaymentRouter from "./modules/adminPayments/adminPayment.route.js";
-import subscriptionRouter from "./modules/Subscription Plans/subscription.route.js";
-import subscriptionAdminRouter from "./modules/Subscription Plans/subscriptionAdmin.route.js";
+import subscriptionRouter from "./modules/SubscriptionPlans/subscription.route.js";
+import subscriptionAdminRouter from "./modules/SubscriptionPlans/subscriptionAdmin.route.js";
 import ChatRoutes from "./modules/chats/chat.route.js";
 import TrackingRoutes from "./modules/Tracking system/tracking.routes.js";
-import reviewRouter      from "./modules/reviews/review.route.js";
+import reviewRouter from "./modules/reviews/review.route.js";
 import reviewAdminRouter from "./modules/reviews/reviewAdmin.route.js";
 
 const app = express();
@@ -68,7 +68,7 @@ app.use("/api/subscriptions", subscriptionRouter);
 app.use("/api/admin/subscriptions", subscriptionAdminRouter);
 app.use("/api/chat", ChatRoutes);
 app.use("/api/tracking", TrackingRoutes);
-app.use("/api/reviews",       reviewRouter);
+app.use("/api/reviews", reviewRouter);
 app.use("/api/admin/reviews", reviewAdminRouter);
 
 app.get("/", (req, res) => {

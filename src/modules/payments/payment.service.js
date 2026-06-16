@@ -179,75 +179,6 @@ export const initiatePayment = async (userId, bookingId, paymentMethod) => {
 
 //  Confirm Payment
 
-// export const confirmPayment = async (paymentId, userId) => {
-//   const payment = await Payment.findById(paymentId).populate({
-//     path: "booking",
-//     select: "status scheduledDate location totalAmount",
-//     populate: [{ path: "service", select: "name category" }],
-//   });
-
-//   if (!payment) throw new Error("Payment not found");
-//   if (payment.user.toString() !== userId.toString())
-//     throw new Error("Unauthorized");
-
-//   const serviceName = payment.booking.service.name;
-
-//   if (payment.paymentMethod === "instapay") {
-//     if (!payment.aiVerificationResult?.rawResponse)
-//       throw new Error("Please upload your InstaPay receipt first");
-
-//     payment.status = "pending_verification";
-//     await payment.save();
-
-//     await notifyPaymentPendingVerification(
-//       payment.user,
-//       {
-//         paymentId: payment._id.toString(),
-//         bookingId: payment.booking._id.toString(),
-//       },
-//       { amount: payment.amount, serviceName },
-//     );
-
-//     return payment;
-//   }
-
-//   if (payment.paymentMethod === "card") {
-//     payment.status = "paid";
-//     await payment.save();
-//     await _releasePaymentToWorker(payment, serviceName);
-
-//     await notifyPaymentReceived(
-//       payment.user,
-//       {
-//         paymentId: payment._id.toString(),
-//         bookingId: payment.booking._id.toString(),
-//       },
-//       { amount: payment.amount, serviceName },
-//     );
-
-//     return payment;
-//   }
-
-//   if (payment.paymentMethod === "cash") {
-//     payment.status = "paid";
-//     await payment.save();
-//     await _deductCashCommissionFromWorker(payment);
-
-//     await notifyPaymentReceived(
-//       payment.user,
-//       {
-//         paymentId: payment._id.toString(),
-//         bookingId: payment.booking._id.toString(),
-//       },
-//       { amount: payment.amount, serviceName },
-//     );
-
-//     return payment;
-//   }
-
-//   throw new Error("Invalid payment method");
-// };
-
 export const confirmPayment = async (paymentId, userId) => {
   const payment = await Payment.findById(paymentId).populate({
     path: "booking",
@@ -286,7 +217,6 @@ export const confirmPayment = async (paymentId, userId) => {
     payment.status = "paid";
     await payment.save();
 
-    // ✅ الـ worker بياخد 90% في محفظته
     await _releasePaymentToWorker(payment, serviceName);
 
     await notifyPaymentReceived(
@@ -306,7 +236,6 @@ export const confirmPayment = async (paymentId, userId) => {
     payment.status = "paid";
     await payment.save();
 
-    // ✅ خصم 10% من محفظة الـ worker (الـ worker دفع العمولة)
     await _deductCashCommissionFromWorker(payment);
 
     await notifyPaymentReceived(
@@ -357,56 +286,6 @@ export const getReceipt = async (paymentId, userId) => {
 
 //  Helpers
 
-// export const getWorkerWalletByProfileId = async (workerProfileId) => {
-//   const workerProfile = await mongoose
-//     .model("WorkerProfile")
-//     .findById(workerProfileId)
-//     .select("user");
-
-//   if (!workerProfile) throw new Error("Worker profile not found");
-
-//   const wallet = await Wallet.findOne({ owner: workerProfile.user });
-//   if (!wallet) throw new Error("Worker wallet not found");
-
-//   return { wallet, workerUserId: workerProfile.user };
-// };
-
-// const _releasePaymentToWorker = async (payment, serviceName) => {
-//   const { wallet, workerUserId } = await getWorkerWalletByProfileId(
-//     payment.worker,
-//   );
-
-//   await wallet.credit(payment.workerEarnings, {
-//     source: "booking_payment",
-//     referenceId: payment.booking,
-//     referenceModel: "Booking",
-//     note: `Earnings: ${payment.booking.toString().slice(-8)}`,
-//   });
-
-//   await notifyEarningsPending(
-//     workerUserId,
-//     {
-//       paymentId: payment._id.toString(),
-//       bookingId: payment.booking.toString(),
-//     },
-//     { amount: payment.workerEarnings, serviceName },
-//   );
-// };
-
-// const _deductCashCommissionFromWorker = async (payment) => {
-//   const wallet = await getWorkerWalletByProfileId(payment.worker);
-
-//   if (!wallet.hasSufficientBalance(payment.platformFee))
-//     throw new Error("Worker has insufficient balance for platform commission");
-
-//   await wallet.debit(payment.platformFee, {
-//     source: "booking_commission",
-//     referenceId: payment.booking,
-//     referenceModel: "Booking",
-//     note: `Fee: ${payment.booking.toString().slice(-8)}`,
-//   });
-// };
-
 export const getWorkerWalletByProfileId = async (workerProfileId) => {
   const workerProfile = await mongoose
     .model("WorkerProfile")
@@ -421,7 +300,6 @@ export const getWorkerWalletByProfileId = async (workerProfileId) => {
   return { wallet, workerUserId: workerProfile.user };
 };
 
-// ✅ للـ Card: الـ worker بياخد 90% في محفظته
 const _releasePaymentToWorker = async (payment, serviceName) => {
   const { wallet, workerUserId } = await getWorkerWalletByProfileId(payment.worker);
 
@@ -442,7 +320,6 @@ const _releasePaymentToWorker = async (payment, serviceName) => {
   );
 };
 
-// ✅ للـ Cash: خصم 10% من محفظة الـ worker (الـ worker بيدفع العمولة)
 const _deductCashCommissionFromWorker = async (payment) => {
   const { wallet } = await getWorkerWalletByProfileId(payment.worker);
 

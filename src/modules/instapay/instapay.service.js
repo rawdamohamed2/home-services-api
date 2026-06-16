@@ -55,10 +55,13 @@ export const verifyInstapayReceipt = async (
 //  Admin — InstaPay Payments
 
 export const getAdminInstapayPayments = async (query = {}) => {
-  const { page = 1, limit = 10, status = "pending_verification" } = query;
+  const { page = 1, limit = 10, status } = query;
+  
+  const filter = { paymentMethod: "instapay" };
+  if (status) filter.status = status;
 
   const [payments, total] = await Promise.all([
-    Payment.find({ paymentMethod: "instapay", status })
+    Payment.find(filter)  
       .populate("user", "firstName lastName")
       .populate({
         path: "worker",
@@ -71,7 +74,7 @@ export const getAdminInstapayPayments = async (query = {}) => {
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(Number(limit)),
-    Payment.countDocuments({ paymentMethod: "instapay", status }),
+    Payment.countDocuments(filter),  
   ]);
 
   return {

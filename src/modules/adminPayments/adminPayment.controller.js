@@ -49,15 +49,15 @@ export const adminGetRevenue = async (req, res, next) => {
     ]);
 
     const bookingEarnings = result?.bookingEarnings || 0;
-    const subscriptionRevenue = subResult?.total || 0;
+    const subscriptionEarnings = subResult?.total || 0;
 
     return ApiResponse.success(res, {
       clientPayments: result?.clientPayments || 0,
       workerEarnings: result?.workerEarnings || 0,
       bookingEarnings,
-      subscriptionRevenue,
+      subscriptionEarnings,
       subscriptionCount: subResult?.count || 0,
-      totalPlatformRevenue: bookingEarnings + subscriptionRevenue,
+      PlatformEarnings: bookingEarnings + subscriptionEarnings,
       pendingBookings: pendingResult?.total || 0,
     });
   } catch (error) {

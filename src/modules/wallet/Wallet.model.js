@@ -75,7 +75,7 @@ walletSchema.methods.credit = async function (amount, options = {}) {
     source: options.source || "wallet_topup",
     referenceId: options.referenceId,
     referenceModel: options.referenceModel,
-    note: options.note,
+    note: options.note || null,
     status: "completed",
   });
 
@@ -99,7 +99,7 @@ walletSchema.methods.debit = async function (amount, options = {}) {
     source: options.source || "withdrawal",
     referenceId: options.referenceId,
     referenceModel: options.referenceModel,
-    note: options.note,
+    note: options.note || null,
     status: "completed",
   });
 

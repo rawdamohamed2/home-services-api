@@ -125,11 +125,15 @@ export const adminApproveInstapayPayment = async (paymentId, adminId) => {
       payment.worker,
     );
 
+    
+    const bookingId = payment.booking._id.toString();
+    const shortBookingId = bookingId.slice(-8);
+
     await wallet.credit(payment.workerEarnings, {
       source: "booking_payment",
       referenceId: payment.booking,
       referenceModel: "Booking",
-      note: `Earnings from booking #${payment.booking}`,
+      note: `Earnings from booking #${shortBookingId}`,
     });
 
     const serviceName = payment.booking.service?.name || "your service";
@@ -157,7 +161,6 @@ export const adminApproveInstapayPayment = async (paymentId, adminId) => {
     throw error;
   }
 };
-
 export const adminRejectInstapayPayment = async (
   paymentId,
   adminId,

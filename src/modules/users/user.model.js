@@ -117,12 +117,17 @@ const userSchema = new mongoose.Schema(
       default: false,
     },
     isMuted: {
-      type: Boolean,
-      default: false,
+    type: Boolean,
+    default: false,
     },
     mutedUntil: {
-      type: Date,
-      default: null,
+    type: Date,
+    default: null,
+    },
+    mutedReason: {
+    type: String,
+    enum: ["comment_report", "admin_suspend", null],
+    default: null,
     },
 
     wallet: {

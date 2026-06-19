@@ -10,23 +10,22 @@ import {
 } from "../notifications/Notification.service.js";
 
 const checkNotMuted = async (userId) => {
-  const user = await User.findById(userId).select("isMuted mutedUntil");
-  if (!user) throw new Error("User not found");
+  const user = await User.findById(userId).select("isMuted mutedUntil mutedReason");
+  if (!user || !user.isMuted) return;
 
-  if (user.isMuted && user.mutedUntil) {
-    if (user.mutedUntil > new Date()) {
-      const remainingDays = Math.ceil(
-        (user.mutedUntil - new Date()) / (1000 * 60 * 60 * 24),
-      );
-      throw new Error(
-        `You are muted and cannot post comments for ${remainingDays} more day(s)`,
-      );
-    } else {
-      user.isMuted = false;
-      user.mutedUntil = null;
-      await user.save();
-    }
+  if (user.mutedReason === "admin_suspend") {
+    throw new Error("Your account has been suspended. Contact support.");
   }
+
+  if (user.mutedUntil && user.mutedUntil > new Date()) {
+    const remainingDays = Math.ceil((user.mutedUntil - new Date()) / (1000 * 60 * 60 * 24));
+    throw new Error(`You are muted and cannot post comments for ${remainingDays} more day(s)`);
+  }
+
+  user.isMuted = false;
+  user.mutedUntil = null;
+  user.mutedReason = null;
+  await user.save();
 };
 
 //  USER — Create Review
@@ -404,9 +403,10 @@ export const adminMuteUser = async (reportId, adminId, notes) => {
   mutedUntil.setDate(mutedUntil.getDate() + 7);
 
   await User.findByIdAndUpdate(report.commentAuthor, {
-    isMuted: true,
-    mutedUntil,
-  });
+  isMuted: true,
+  mutedUntil,
+  mutedReason: "comment_report",
+});
 
   report.status = "user_muted";
   report.adminNotes = notes || null;

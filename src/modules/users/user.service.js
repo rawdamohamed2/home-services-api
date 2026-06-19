@@ -261,13 +261,15 @@ export const adminUpdateClient = async (userId, updateData) => {
         user.phone = normalizedPhone;
     }
 
-    if (status === 'active') {
-        user.isMuted    = false;
+    if (status === "active") {
+        user.isMuted = false;
         user.mutedUntil = null;
+        user.mutedReason = null;
     }
-    if (status === 'suspended') {
-        user.isMuted    = true;
-        user.mutedUntil = null; // suspend يدوي — الأدمن هو اللي بيرجعه active
+    if (status === "suspended") {
+        user.isMuted = true;
+        user.mutedUntil = null;
+        user.mutedReason = "admin_suspend";
     }
 
     await user.save();

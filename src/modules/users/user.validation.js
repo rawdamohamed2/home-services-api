@@ -103,3 +103,22 @@ export const userIdParamSchema = Joi.object({
       "any.required": "User ID is required",
     }),
 }).unknown(false);
+
+//  ADMIN — User Management Schemas
+
+export const adminUpdateClientSchema = Joi.object({
+  name: Joi.string().min(2).max(100).optional(),
+  email: Joi.string().email().optional(),
+  phone: Joi.string().optional(),
+  status: Joi.string().valid('active', 'suspended').optional(),
+});
+
+export const validate = (schema, source = "body") =>
+  (req, res, next) => {
+    const { error } = schema.validate(req[source], { abortEarly: false });
+    if (error) {
+      const messages = error.details.map((d) => d.message);
+      return res.status(400).json({ success: false, errors: messages });
+    }
+    next();
+  };

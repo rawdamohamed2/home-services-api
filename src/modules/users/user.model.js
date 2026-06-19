@@ -136,27 +136,27 @@ const userSchema = new mongoose.Schema(
       type: {
         type: String,
         enum: ["Point"],
-        // شيلنا الـ default: "Point" عشان ميعملش Object فاضي
+        
         required: function () {
           return this.enabledLocation === true;
         },
       },
       coordinates: {
         type: [Number],
-        // مطلوب فقط لو المستخدم فعل اللوكيشن
+        
         required: function () {
           return this.enabledLocation === true;
         },
         validate: {
           validator: function (value) {
-            // لو الحقل اختياري ومبعتش داتا، نعدي الـ validation
+            
             if (!value || value.length === 0) return !this.enabledLocation;
             return (
               value.length === 2 &&
               value[0] >= -180 &&
-              value[0] <= 180 && // Longitude
+              value[0] <= 180 && 
               value[1] >= -90 &&
-              value[1] <= 90 // Latitude
+              value[1] <= 90 
             );
           },
           message: "Invalid coordinates: [longitude, latitude]",
@@ -203,16 +203,16 @@ userSchema.methods.comparePassword = async function (candidatePassword) {
 };
 
 userSchema.methods.createVerificationCode = function () {
-  const code = Math.floor(100000 + Math.random() * 900000).toString(); // 6 أرقام
+  const code = Math.floor(100000 + Math.random() * 900000).toString(); 
   this.verifyOtp = code;
-  this.verifyOtpExpires = Date.now() + 10 * 60 * 1000; // 10 دقائق
+  this.verifyOtpExpires = Date.now() + 10 * 60 * 1000; 
   return code;
 };
 
 userSchema.methods.createResetPasswordCode = function () {
   const code = Math.floor(100000 + Math.random() * 900000).toString();
   this.resetOtpCode = code;
-  this.resetOtpExpires = Date.now() + 10 * 60 * 1000; // 10 دقائق
+  this.resetOtpExpires = Date.now() + 10 * 60 * 1000; 
   return code;
 };
 

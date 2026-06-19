@@ -32,6 +32,7 @@ import TrackingRoutes from "./modules/Tracking system/tracking.routes.js";
 import reviewRouter from "./modules/reviews/review.route.js";
 import reviewAdminRouter from "./modules/reviews/reviewAdmin.route.js";
 import adminUserRouter from "./modules/users/adminUser.route.js";
+import dashboardRouter from "./modules/adminDashboard/dashboard.route.js";
 
 const app = express();
 const httpServer = createServer(app);
@@ -72,6 +73,7 @@ app.use("/api/tracking", TrackingRoutes);
 app.use("/api/reviews", reviewRouter);
 app.use("/api/admin/reviews", reviewAdminRouter);
 app.use("/api/admin/users", adminUserRouter);
+app.use("/api/admin/dashboard", dashboardRouter);
 
 app.get("/", (req, res) => {
   res.status(200).json({

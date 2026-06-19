@@ -286,17 +286,17 @@ export const adminDeleteClient = async (userId) => {
 
 //  GET /api/admin/users/clients/:id/payments 
 export const adminGetClientPayments = async (userId, query = {}) => {
-    const { search } = query;
+    const { search, type } = query; 
 
-    const Booking          = mongoose.model('Booking');
-    const Payment          = mongoose.model('Payment');
+    const Booking = mongoose.model('Booking');
+    const Payment = mongoose.model('Payment');
     const UserSubscription = mongoose.model('UserSubscription');
 
     //  Bookings + Payments 
     const bookings = await Booking.find({ user: userId })
         .populate({
-            path:     'service',
-            select:   'name category',
+            path: 'service',
+            select: 'name category',
             populate: { path: 'category', select: 'name' },
         })
         .sort({ createdAt: -1 })
@@ -309,53 +309,62 @@ export const adminGetClientPayments = async (userId, query = {}) => {
     const paymentMap = Object.fromEntries(payments.map(p => [p.booking.toString(), p]));
 
     const bookingTransactions = bookings
-        .filter(b => paymentMap[b._id.toString()]) // بس اللي ليها payment فعلي
+        .filter(b => paymentMap[b._id.toString()])
         .map(b => {
             const payment = paymentMap[b._id.toString()];
             return {
-                type:           'booking',
-                serviceName:    b.service?.name           || 'N/A',
-                categoryName:   b.service?.category?.name || 'N/A',
-                amount:         payment.amount,
-                fee:            payment.platformFee,
-                netAmount:      payment.amount - payment.platformFee,
-                date:           payment.createdAt,
-                paymentStatus:  payment.status,
-                bookingStatus:  b.status,
-                transactionId:  payment.transactionId,
+                type: 'booking',
+                serviceName: b.service?.name || 'N/A',
+                categoryName: b.service?.category?.name || 'N/A',
+                amount: payment.amount,
+                fee: payment.platformFee,
+                netAmount: payment.amount - payment.platformFee,
+                date: payment.createdAt,
+                paymentStatus: payment.status,
+                bookingStatus: b.status,
+                transactionId: payment.transactionId,
             };
         });
 
-    //  Subscriptions
+    //  Subscriptions 
     const subscriptions = await UserSubscription.find({ user: userId })
         .populate('plan', 'name price discount')
         .sort({ createdAt: -1 })
         .lean();
 
     const subscriptionTransactions = subscriptions.map(s => ({
-        type:               'subscription',
-        planName:           s.plan?.name     || 'N/A',
-        amount:              s.amountPaid,
-        originalPrice:       s.plan?.price    || 0,
-        discount:            s.plan?.discount || 0,
-        startDate:           s.startDate,
-        endDate:             s.endDate,
-        date:                s.createdAt,
-        subscriptionStatus:  s.status,
-        paymentStatus:       'paid',
-        transactionId:       s.transactionId,
-        paymentMethod:       s.paymentType,
-        renewalCount:        s.renewalCount,
+        type: 'subscription',
+        planName: s.plan?.name || 'N/A',
+        amount: s.amountPaid,
+        originalPrice: s.plan?.price || 0,
+        discount: s.plan?.discount || 0,
+        startDate: s.startDate,
+        endDate: s.endDate,
+        date: s.createdAt,
+        subscriptionStatus: s.status,
+        paymentStatus: 'paid',
+        transactionId: s.transactionId,
+        paymentMethod: s.paymentType,
+        renewalCount: s.renewalCount,
     }));
 
+    //  Combine 
     let all = [...bookingTransactions, ...subscriptionTransactions]
         .sort((a, b) => new Date(b.date) - new Date(a.date));
 
+    //  Filter by type 
+    if (type) {
+        if (type === 'booking' || type === 'subscription') {
+            all = all.filter(t => t.type === type);
+        }
+    }
+
+    //  Search 
     if (search) {
         const s = search.toLowerCase();
         all = all.filter(t =>
             t.transactionId?.toLowerCase().includes(s) ||
-            t.serviceName?.toLowerCase().includes(s)   ||
+            t.serviceName?.toLowerCase().includes(s) ||
             t.planName?.toLowerCase().includes(s)
         );
     }

@@ -270,7 +270,13 @@ export const getReceipt = async (paymentId, userId) => {
   if (!payment) throw new Error("Payment not found");
   if (payment.user._id.toString() !== userId.toString())
     throw new Error("Unauthorized");
-  if (payment.status !== "paid") throw new Error("Payment not completed yet");
+  if (payment.status === "pending_verification") {
+    throw new Error("Please wait for admin approval.");
+  }
+  
+  if (payment.status !== "paid") {
+    throw new Error("Payment not completed yet. Current status: " + payment.status);
+  }
 
   return {
     transactionId: payment.transactionId,

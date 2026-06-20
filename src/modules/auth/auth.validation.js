@@ -107,23 +107,31 @@ export const workerRegisterSchema = baseRegisterSchema
     city: Joi.string().required().messages({
       "any.required": "The city is required",
     }),
-    enabledLocation: Joi.boolean().default(true).required(),
+    enabledLocation: Joi.boolean().default(false),
 
     location: Joi.when("enabledLocation", {
       is: true,
       then: Joi.object({
-        type: Joi.string().valid("Point").required().default("Point"),
+        type: Joi.string().valid("Point").default("Point").required(),
         coordinates: Joi.array()
-          .items(Joi.number().min(-180).max(180), Joi.number().min(-90).max(90))
+          .items(
+            Joi.number().min(-180).max(180), // Longitude
+            Joi.number().min(-90).max(90), // Latitude
+          )
           .length(2)
           .required(),
         address: Joi.object({
           street: Joi.string().required(),
           city: Joi.string().required(),
-          details: Joi.string().allow("", null), // Optional details
+          details: Joi.string().allow("", null),
         }).required(),
-      }).required(),
-      otherwise: Joi.forbidden(),
+      })
+        .required()
+        .messages({
+          "any.required":
+            "Location details are required when location is enabled",
+        }),
+      otherwise: Joi.optional().allow(null, {}),
     }),
 
     nationalIdFront: Joi.string().uri().required().messages({
@@ -163,8 +171,13 @@ export const workerRegisterSchema = baseRegisterSchema
       .default("offline"),
     isAvailable: Joi.boolean().default(false),
   })
-  .unknown(false);
-
+  .unknown(false)
+  .custom((value, helpers) => {
+    if (value.enabledLocation && value.location && value.location.address) {
+      value.location.address.city = value.city;
+    }
+    return value;
+  });
 export const loginSchema = Joi.object({
   email: Joi.string()
     .email({ minDomainSegments: 2, tlds: { allow: ["com", "net"] } })

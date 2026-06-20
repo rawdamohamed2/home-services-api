@@ -1,10 +1,7 @@
-import mongoose from "mongoose";
 import ChatRoom from "./ChatRoom.model.js";
-import {
-  NotFoundError,
-  ForbiddenError,
-  AppError,
-} from "../../core/utils/Errors.js";
+import { NotFoundError, ForbiddenError } from "../../core/utils/Errors.js";
+import Message from "../messages/Message.model.js";
+import { getAvailableAdmins } from "../support/supportTicket.service.js";
 
 const populateRoom = (query) =>
   query
@@ -16,7 +13,11 @@ const populateRoom = (query) =>
 export const getUserRooms = async (userId) => {
   try {
     const rooms = await populateRoom(
-      ChatRoom.find({ participants: userId }).sort("-lastMessageAt"),
+      ChatRoom.find({
+        participants: userId,
+        type: { $ne: "support" },
+        status: "active",
+      }).sort("-lastMessageAt"),
     );
     return rooms.map((r) => ({
       ...r.toJSON(),
@@ -54,47 +55,71 @@ export const getOrCreateBotRoom = async (userId) => {
 };
 
 // ─── Get or create support room ───────────────────────────────────────────────
-export const getOrCreateSupportRoom = async (userId, ticketId = null) => {
+export const getOrCreateSupportRoom = async (
+  userId,
+  ticketId = null,
+  agentId = null,
+) => {
   try {
     let room = await ChatRoom.findOne({
       type: "support",
       participants: userId,
       status: "active",
     });
-    if (room) return populateRoom(ChatRoom.findById(room._id));
 
-    const rolesWithPermission = await mongoose
-      .model("RolePermission")
-      .find({ permissions: "manage_ChatAndReviews" })
-      .select("role")
-      .lean();
+    if (room) {
+      const exitRoom = await populateRoom(ChatRoom.findById(room._id));
 
-    if (!rolesWithPermission.length)
-      throw new AppError("No support roles configured", 503);
-
-    const allowedRoles = rolesWithPermission.map((r) => r.role);
-
-    if (!room) {
-      const agent = await mongoose
-        .model("User")
-        .findOne({
-          role: { $in: allowedRoles },
-          isBlocked: false,
+      const messages = await Message.find({ chatRoom: exitRoom._id })
+        .populate("sender", "firstName lastName profileImage role")
+        .populate({
+          path: "replyTo",
+          select: "message messageType sender senderType attachments",
+          populate: {
+            path: "sender",
+            select: "firstName lastName profileImage role",
+          },
         })
-        .select("_id role")
-        .lean();
+        .populate("reactions.user", "firstName lastName profileImage")
+        .populate("readBy.user", "firstName lastName profileImage");
 
-      if (!agent) throw new AppError("No support agent available", 503);
-
-      room = await ChatRoom.create({
-        participants: [userId, agent._id],
-        type: "support",
-        status: "active",
-        ...(ticketId && { supportTicket: ticketId }),
-      });
+      return { room: exitRoom, messages: messages };
     }
 
-    return populateRoom(ChatRoom.findById(room._id));
+    let finalAgentId = agentId;
+
+    if (!finalAgentId) {
+      const availableAdmins = await getAvailableAdmins();
+
+      if (availableAdmins.length > 0) {
+        const randomIndex = Math.floor(Math.random() * availableAdmins.length);
+        finalAgentId = availableAdmins[randomIndex]._id;
+      }
+    }
+
+    room = await ChatRoom.create({
+      participants: [userId, finalAgentId],
+      type: "support",
+      status: "active",
+      ...(ticketId && { supportTicket: ticketId }),
+    });
+
+    const NewRoom = await populateRoom(ChatRoom.findById(room._id));
+
+    const messages = await Message.find({ chatRoom: NewRoom._id })
+      .populate("sender", "firstName lastName profileImage role")
+      .populate({
+        path: "replyTo",
+        select: "message messageType sender senderType attachments",
+        populate: {
+          path: "sender",
+          select: "firstName lastName profileImage role",
+        },
+      })
+      .populate("reactions.user", "firstName lastName profileImage")
+      .populate("readBy.user", "firstName lastName profileImage");
+
+    return { room: NewRoom, messages: messages };
   } catch (e) {
     throw e;
   }
@@ -135,6 +160,43 @@ export const closeRoom = async (roomId) => {
     room.status = "closed";
     await room.save();
     return room;
+  } catch (e) {
+    throw e;
+  }
+};
+
+export const getChatUserWorker = async (userId, bookingId) => {
+  try {
+    const room = await ChatRoom.findOne({
+      type: "user_worker",
+      booking: bookingId,
+    })
+      .populate("participants", "firstName lastName profileImage role")
+      .populate("lastMessage", "message messageType createdAt senderType")
+      .populate("supportTicket", "subject status priority");
+
+    if (!room) {
+      throw new Error("Chat room not found for this booking");
+    }
+
+    const messages = await Message.find({ chatRoom: room._id })
+      .populate("sender", "firstName lastName profileImage role")
+      .populate({
+        path: "replyTo",
+        select: "message messageType sender senderType attachments",
+        populate: {
+          path: "sender",
+          select: "firstName lastName profileImage role",
+        },
+      })
+      .populate("reactions.user", "firstName lastName profileImage")
+      .populate("readBy.user", "firstName lastName profileImage");
+
+    if (messages.length === 0) {
+      return { room: room, messages: "no messages found" };
+    }
+
+    return { room: room, messages: messages };
   } catch (e) {
     throw e;
   }

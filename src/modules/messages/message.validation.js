@@ -19,44 +19,22 @@ export const getMessagesValidation = roomIdValidation
 
 export const sendMessageValidation = roomIdValidation
   .keys({
-    message: Joi.string().min(5).required(),
+    message: Joi.string().min(1).optional().allow(""),
 
     messageType: Joi.string()
       .trim()
       .valid("text", "image", "file", "location", "system", "template")
       .messages({
         "any.only":
-          "message Type must be one of text, file, location, system, template",
+          "message Type must be one of text, image, file, location, system, template",
       })
       .default("text"),
 
     replyTo: objectIdRule.optional(),
 
-    attachments: Joi.array()
-      .items(
-        Joi.object({
-          url: Joi.string().uri().required().messages({
-            "string.uri": "Attachment URL must be a valid URL",
-            "any.required": "Attachment URL is required",
-          }),
-
-          type: Joi.string().required().messages({
-            "any.required": "Attachment type is required",
-          }),
-
-          name: Joi.string().required().messages({
-            "any.required": "Attachment name is required",
-          }),
-
-          size: Joi.number().positive().required().messages({
-            "number.positive": "Attachment size must be a positive number",
-            "any.required": "Attachment size is required",
-          }),
-        }),
-      )
-      .optional(),
+    attachments: Joi.any().optional(),
   })
-  .unknown(false);
+  .unknown(true); // 3. خليناها true عشان لو Multer رمى أي داتا زيادة بتاعة الملفات الـ Joi ميعترضش
 
 export const reactToMessageValidation = messageIdValidation
   .keys({

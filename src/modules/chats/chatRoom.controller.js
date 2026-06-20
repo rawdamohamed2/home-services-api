@@ -1,5 +1,7 @@
 import * as chatRoomService from "./chatRoom.service.js";
 import ApiResponse from "../../core/utils/ApiResponse.js";
+import errorhandler from "../../core/middleware/Errorhandler.js";
+import { getChatUserWorker } from "./chatRoom.service.js";
 
 export const getMyRooms = async (req, res) => {
   const userId = req.user._id;
@@ -75,5 +77,16 @@ export const closeRoom = async (req, res) => {
     if (err.isOperational)
       return ApiResponse.error(res, err.message, err.statusCode);
     return ApiResponse.serverError(res);
+  }
+};
+
+export const getUserWorkerChat = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { bookingId } = req.params;
+    const chat = await getChatUserWorker(userId, bookingId);
+    return ApiResponse.success(res, chat);
+  } catch (err) {
+    errorhandler(err, req, res);
   }
 };

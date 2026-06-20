@@ -10,8 +10,11 @@ import {
   updateGeoLocation,
   updateWorkerAvailability,
   updateAvailabilityStatus,
-  deleteworker,
+  deleteWorker,
   editWorkerData,
+  viewWorkerProfile,
+  getWorkerDashboardData,
+  getFullWorkerProfile,
 } from "./worker.service.js";
 import errorHandler from "../../core/middleware/Errorhandler.js";
 
@@ -46,18 +49,18 @@ export const updateAvailability = async (req, res) => {
   }
 };
 
-// export const getMe = async (req, res) => {
-//     const userId = req.user._id;
-//     if (!userId) {
-//         return ApiResponse.error(res, 'User id not found');
-//     }
-//     try {
-//         const data = await getFullWorkerProfile(userId);
-//         return ApiResponse.success(res, data, 'Your profile fetched successfully');
-//     } catch (error) {
-//         errorHandler(error, req, res);
-//     }
-// };
+export const getMe = async (req, res) => {
+  const userId = req.user._id;
+  if (!userId) {
+    return ApiResponse.error(res, "User id not found");
+  }
+  try {
+    const data = await getFullWorkerProfile(userId);
+    return ApiResponse.success(res, data, "Your profile fetched successfully");
+  } catch (error) {
+    errorHandler(error, req, res);
+  }
+};
 
 export const updateLocation = async (req, res) => {
   try {
@@ -135,7 +138,7 @@ export const deleteMe = async (req, res) => {
     return ApiResponse.error(res, "User id not found");
   }
   try {
-    const data = await deleteworker(userId);
+    const data = await deleteWorker(userId);
     await sendEmail(
       data.email,
       "Your profile is deleted",
@@ -153,7 +156,32 @@ export const deleteMe = async (req, res) => {
 };
 
 //_________________________________________
+export const getWorkerDashboard = async (req, res) => {
+  try {
+    const userId = req.user._id;
 
+    const dashboardData = await getWorkerDashboardData(userId);
+
+    const finalResponse = {
+      workerInfo: {
+        firstName: req.user.firstName,
+        lastName: req.user.lastName,
+        profileImage: req.user.profileImage,
+      },
+      ...dashboardData,
+    };
+
+    return ApiResponse.success(
+      res,
+      finalResponse,
+      "Dashboard data fetched successfully",
+    );
+  } catch (error) {
+    errorHandler(error, req, res);
+  }
+};
+
+//_________________________________________
 export const getAllWorkers = async (req, res) => {
   try {
     const data = req.query;
@@ -200,5 +228,17 @@ export const updateWorker = async (req, res) => {
     return ApiResponse.success(res, worker, "worker updated successfully");
   } catch (error) {
     errorHandler(error, req, res);
+  }
+};
+
+export const viewWorker = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { workerId } = req.params;
+    const { bookingId } = req.body;
+    const worker = await viewWorkerProfile(userId, workerId, bookingId);
+    return ApiResponse.success(res, worker);
+  } catch (e) {
+    errorHandler(e, req, res);
   }
 };

@@ -8,6 +8,8 @@ import {
   processExpiringSubscriptions,
   processExpiredSubscriptions,
 } from "../../modules/SubscriptionPlans/subscription.service.js";
+import SupportTicket from "../../modules/support/SupportTicket.model.js";
+import { notifyTicketClosed } from "../../modules/notifications/Notification.service.js";
 
 export const startCronJobs = () => {
   // Every 5 min — expire stale assignments
@@ -59,6 +61,36 @@ export const startCronJobs = () => {
         );
     } catch (err) {
       console.error("[CRON]  subscriptions processing:", err.message);
+    }
+  });
+
+  cron.schedule("0 * * * *", async () => {
+    try {
+      console.log("Running auto-close tickets job...");
+
+      const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+      const expiredTickets = await SupportTicket.find({
+        status: { $nin: ["closed", "resolved"] },
+        updatedAt: { $lte: twentyFourHoursAgo }, // أو استخدم lastMessageAt لو عندك
+      });
+
+      for (const ticket of expiredTickets) {
+        ticket.status = "closed";
+        ticket.closeReason =
+          "Closed automatically due to inactivity for 24 hours";
+        await ticket.save();
+
+        await notifyTicketClosed(
+          ticket.user,
+          { ticketId: ticket._id.toString() },
+          { subject: ticket.subject },
+        );
+
+        console.log(`Ticket ${ticket._id} closed automatically.`);
+      }
+    } catch (error) {
+      console.error("Error in auto-close tickets cron job:", error);
     }
   });
 

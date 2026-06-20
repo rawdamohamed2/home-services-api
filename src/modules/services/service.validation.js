@@ -105,26 +105,10 @@ export const ServiceIdValidation = Joi.object({
 
 export const searchServicesValidation = Joi.object({
   page: Joi.number().integer().min(1).default(1),
-  limit: Joi.number().integer().min(1).max(11).default(5).messages({
-    "number.max": "page cannot exceed 11",
+  limit: Joi.number().integer().min(1).max(50).default(5).messages({
+    "number.max": "page cannot exceed 50",
   }),
-  category: Joi.string()
-    .trim()
-    .optional()
-    .valid(
-      "Air Conditioner",
-      "Cleaning",
-      "Furniture Moving",
-      "Carpentry",
-      "Water Heater",
-      "Plumbing",
-      "Electricity",
-    )
-    .messages({
-      "any.only":
-        "status must be one of Air Conditioner, Cleaning, Furniture Moving, Carpentry, Water Heater,\n" +
-        "            Plumbing, Electricity ",
-    }),
+  category: Joi.string().trim().optional(),
   status: Joi.boolean().optional(),
 
   name: Joi.string().min(4).optional(),

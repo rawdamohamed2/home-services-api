@@ -11,6 +11,9 @@ import {
   completeBooking,
   deleteMe,
   updateWorker,
+  viewWorker,
+  getWorkerDashboard,
+  getMe,
 } from "./worker.controller.js";
 import { protect } from "../../core/middleware/authMiddleware.js";
 import { authorize, isStaff } from "../../core/middleware/roleMiddleware.js";
@@ -26,7 +29,10 @@ import {
   workerSearchSchema,
   workerUpdatedSchema,
 } from "./worker.validation.js";
-import { checkPermission } from "../../core/middleware/permissionMiddleware.js";
+import {
+  checkPermission,
+  checkPermissionAndRole,
+} from "../../core/middleware/permissionMiddleware.js";
 
 const workerRouter = Router();
 
@@ -66,7 +72,7 @@ workerRouter.patch(
   authorize("worker"),
   toggleStatus,
 );
-
+workerRouter.get("/dashboard", protect, getWorkerDashboard);
 // workerRouter.get(
 //   "/bookings",
 //   protect,
@@ -75,8 +81,14 @@ workerRouter.patch(
 //   getMyBookings,
 // );
 
-// workerRouter.get("/me", protect, authorize("worker"), getMe);
+workerRouter.get("/me", protect, authorize("worker"), getMe);
 
+workerRouter.get(
+  "/:workerId/viewProfile",
+  protect,
+  authorize("user", "worker"),
+  viewWorker,
+);
 workerRouter.patch(
   "/:id/complete",
   validate(workerCompletedSchema),
@@ -91,8 +103,8 @@ workerRouter.get(
   "/:id",
   validate(getWorkerByIdSchema),
   protect,
-  isStaff,
-  checkPermission("manage_users"),
+  //isStaff,
+  //checkPermissionAndRole("manage_users", "user"),
   getWorkerById,
 );
 
@@ -112,4 +124,5 @@ workerRouter.patch(
   checkPermission("manage_users"),
   updateWorker,
 );
+
 export default workerRouter;

@@ -90,6 +90,7 @@ export const findNearbyWorkersByCategory = async ({
         ...(categoryId && { categories: categoryId }),
       })
         .select("_id user")
+        .populate("user", "firstName lastName")
         .limit(limit)
         .lean();
 
@@ -99,7 +100,7 @@ export const findNearbyWorkersByCategory = async ({
         );
         return workers.map((w) => ({
           workerId: w._id,
-          workerUserId: w.user,
+          workerUser: w.user,
         }));
       }
     }

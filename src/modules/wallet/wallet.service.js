@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import Wallet from "./Wallet.model.js";
 import WalletTransaction from "./WalletTransaction.model.js";
+import Payment from "../payments/Payment.model.js";
 
 export const getWallet = async (userId) => {
   let wallet = await Wallet.findOne({ owner: userId });
@@ -37,14 +38,20 @@ export const getTransactions = async (userId, query = {}) => {
             populate: { path: "category", select: "name" }
           })
           .lean();
-        
-        if (booking) {
+   
+      if (booking) {
+          
+          const payment = await Payment.findOne({ booking: transaction.referenceId })
+            .select("status")
+            .lean();
+
           return {
             ...transaction,
             serviceName: booking.service?.name || null,
             categoryName: booking.service?.category?.name || null,
             selectedOptions: booking.selectedOptions,
-            totalAmount: booking.totalAmount
+            totalAmount: booking.totalAmount,
+            paymentStatus: payment?.status || null, 
           };
         }
       }

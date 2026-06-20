@@ -21,7 +21,7 @@ import notificationsRoutes from "./modules/notifications/Notification.routes.js"
 import assignmentsRoutes from "./modules/bookingAssignment/bookingAssignment.route.js";
 import paymentRouter from "./modules/payments/payment.route.js";
 import workerWalletRouter from "./modules/wallet/workerWallet.route.js";
-import userWalletRouter from "./modules/wallet/userWallet.route.js";
+import paymentHistoryRouter from "./modules/paymentHistory/paymentHistory.route.js";
 import withdrawalAdminRouter from "./modules/withdrawals/withdrawalAdmin.route.js";
 import instapayRouter from "./modules/instapay/instapay.route.js";
 import adminPaymentRouter from "./modules/adminPayments/adminPayment.route.js";
@@ -31,6 +31,8 @@ import ChatRoutes from "./modules/chats/chat.route.js";
 import TrackingRoutes from "./modules/Tracking system/tracking.routes.js";
 import reviewRouter from "./modules/reviews/review.route.js";
 import reviewAdminRouter from "./modules/reviews/reviewAdmin.route.js";
+import adminUserRouter from "./modules/users/adminUser.route.js";
+import dashboardRouter from "./modules/adminDashboard/dashboard.route.js";
 import searchRoutes from "./modules/search/search.route.js";
 
 const app = express();
@@ -61,7 +63,7 @@ app.use("/api/categories", categoryRoutes);
 app.use("/api/role-permissions", roleRoutes);
 app.use("/api/payments", paymentRouter);
 app.use("/api/wallet", workerWalletRouter);
-app.use("/api/user/wallet", userWalletRouter);
+app.use("/api/payments/history", paymentHistoryRouter);
 app.use("/api/admin/payments/withdrawals", withdrawalAdminRouter);
 app.use("/api/admin/payments/instapay", instapayRouter);
 app.use("/api/admin/payments", adminPaymentRouter);
@@ -71,6 +73,8 @@ app.use("/api/chat", ChatRoutes);
 app.use("/api/tracking", TrackingRoutes);
 app.use("/api/reviews", reviewRouter);
 app.use("/api/admin/reviews", reviewAdminRouter);
+app.use("/api/admin/users", adminUserRouter);
+app.use("/api/admin/dashboard", dashboardRouter);
 app.use("/api/search", searchRoutes);
 
 app.get("/", (req, res) => {

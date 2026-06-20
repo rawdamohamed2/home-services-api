@@ -192,6 +192,7 @@ export const confirmPayment = async (paymentId, userId) => {
 
   const serviceName = payment.booking.service.name;
 
+  // === InstaPay ===
   if (payment.paymentMethod === "instapay") {
     if (!payment.aiVerificationResult?.rawResponse)
       throw new Error("Please upload your InstaPay receipt first");
@@ -205,15 +206,17 @@ export const confirmPayment = async (paymentId, userId) => {
         paymentId: payment._id.toString(),
         bookingId: payment.booking._id.toString(),
       },
-      { amount: payment.amount, serviceName },
+      { amount: payment.amount, serviceName }
     );
 
     return payment;
   }
 
+  // === Card ===
   if (payment.paymentMethod === "card") {
     payment.status = "paid";
     await payment.save();
+
     await _releasePaymentToWorker(payment, serviceName);
 
     await notifyPaymentReceived(
@@ -222,15 +225,17 @@ export const confirmPayment = async (paymentId, userId) => {
         paymentId: payment._id.toString(),
         bookingId: payment.booking._id.toString(),
       },
-      { amount: payment.amount, serviceName },
+      { amount: payment.amount, serviceName }
     );
 
     return payment;
   }
 
+  // === Cash ===
   if (payment.paymentMethod === "cash") {
     payment.status = "paid";
     await payment.save();
+
     await _deductCashCommissionFromWorker(payment);
 
     await notifyPaymentReceived(
@@ -239,7 +244,7 @@ export const confirmPayment = async (paymentId, userId) => {
         paymentId: payment._id.toString(),
         bookingId: payment.booking._id.toString(),
       },
-      { amount: payment.amount, serviceName },
+      { amount: payment.amount, serviceName }
     );
 
     return payment;
@@ -265,7 +270,13 @@ export const getReceipt = async (paymentId, userId) => {
   if (!payment) throw new Error("Payment not found");
   if (payment.user._id.toString() !== userId.toString())
     throw new Error("Unauthorized");
-  if (payment.status !== "paid") throw new Error("Payment not completed yet");
+  if (payment.status === "pending_verification") {
+    throw new Error("Please wait for admin approval.");
+  }
+  
+  if (payment.status !== "paid") {
+    throw new Error("Payment not completed yet. Current status: " + payment.status);
+  }
 
   return {
     transactionId: payment.transactionId,
@@ -296,9 +307,7 @@ export const getWorkerWalletByProfileId = async (workerProfileId) => {
 };
 
 const _releasePaymentToWorker = async (payment, serviceName) => {
-  const { wallet, workerUserId } = await getWorkerWalletByProfileId(
-    payment.worker,
-  );
+  const { wallet, workerUserId } = await getWorkerWalletByProfileId(payment.worker);
 
   await wallet.credit(payment.workerEarnings, {
     source: "booking_payment",
@@ -313,15 +322,16 @@ const _releasePaymentToWorker = async (payment, serviceName) => {
       paymentId: payment._id.toString(),
       bookingId: payment.booking.toString(),
     },
-    { amount: payment.workerEarnings, serviceName },
+    { amount: payment.workerEarnings, serviceName }
   );
 };
 
 const _deductCashCommissionFromWorker = async (payment) => {
-  const wallet = await getWorkerWalletByProfileId(payment.worker);
+  const { wallet } = await getWorkerWalletByProfileId(payment.worker);
 
-  if (!wallet.hasSufficientBalance(payment.platformFee))
+  if (!wallet.hasSufficientBalance(payment.platformFee)) {
     throw new Error("Worker has insufficient balance for platform commission");
+  }
 
   await wallet.debit(payment.platformFee, {
     source: "booking_commission",

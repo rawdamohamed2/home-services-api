@@ -62,7 +62,6 @@ export const createMessage = async (roomId, sender, payload) => {
       replyTo = null,
       attachments = [],
     } = payload;
-    console.log(attachments);
     const room = await ChatRoom.findById(roomId).populate(
       "participants",
       "firstName lastName fcmToken role",

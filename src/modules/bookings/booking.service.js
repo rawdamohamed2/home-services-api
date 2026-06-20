@@ -115,6 +115,11 @@ export const fetchBookings = async (
       }
     }
     if (status) filter.status = status;
+    if (!status) {
+      filter.status = {
+        $in: ["accepted", "in-progress"],
+      };
+    }
     const skip = (Number(page) - 1) * Number(limit);
 
     const [bookings, total] = await Promise.all([
@@ -132,7 +137,7 @@ export const fetchBookings = async (
           },
         })
         .populate("review")
-        .sort(sort)
+        .sort("-createdAt")
         .skip(skip)
         .limit(Number(limit)),
       Booking.countDocuments(filter),

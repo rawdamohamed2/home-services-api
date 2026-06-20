@@ -1,5 +1,6 @@
 import * as trackingService from "./tracking.service.js";
 import ApiResponse from "../../core/utils/ApiResponse.js";
+import errorHandler from "../../core/middleware/Errorhandler.js";
 
 export const updateLocation = async (req, res) => {
   try {
@@ -11,9 +12,7 @@ export const updateLocation = async (req, res) => {
     });
     return ApiResponse.success(res, result, "Location updated");
   } catch (err) {
-    if (err.isOperational)
-      return ApiResponse.error(res, err.message, err.statusCode);
-    return ApiResponse.serverError(res);
+    errorHandler(err, req, res);
   }
 };
 
@@ -26,9 +25,7 @@ export const getWorkerLocation = async (req, res) => {
     );
     return ApiResponse.success(res, location, "Worker location fetched");
   } catch (err) {
-    if (err.isOperational)
-      return ApiResponse.error(res, err.message, err.statusCode);
-    return ApiResponse.serverError(res);
+    errorHandler(err, req, res);
   }
 };
 
@@ -40,9 +37,7 @@ export const updateStatus = async (req, res) => {
     );
     return ApiResponse.success(res, profile, "Status updated");
   } catch (err) {
-    if (err.isOperational)
-      return ApiResponse.error(res, err.message, err.statusCode);
-    return ApiResponse.serverError(res);
+    errorHandler(err, req, res);
   }
 };
 
@@ -51,8 +46,6 @@ export const disableLocation = async (req, res) => {
     const result = await trackingService.disableWorkerLocation(req.user._id);
     return ApiResponse.success(res, result, "Location disabled");
   } catch (err) {
-    if (err.isOperational)
-      return ApiResponse.error(res, err.message, err.statusCode);
-    return ApiResponse.serverError(res);
+    if (err.isOperational) errorHandler(err, req, res);
   }
 };

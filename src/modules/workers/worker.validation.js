@@ -180,7 +180,7 @@ export const workerUpdatedSchema = Joi.object({
       .messages({
         "array.min": "At least one category is required",
       }),
-    memberSince: Joi.date().iso().max("now").required().messages({
+    memberSince: Joi.date().iso().max("now").messages({
       "date.iso": "memberSince must be a valid ISO 8601 date string",
       "date.max": "memberSince cannot be a future date",
     }),

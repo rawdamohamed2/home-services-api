@@ -7,6 +7,7 @@ import {
   ForbiddenError,
   AppError,
 } from "../../core/utils/Errors.js";
+import { getWorkerUserId } from "../workers/worker.service.js";
 
 // ─── Worker يبعت location update ─────────────────────────────────────────────
 export const updateWorkerLocation = async (userId, { longitude, latitude }) => {
@@ -78,66 +79,80 @@ export const updateWorkerLocation = async (userId, { longitude, latitude }) => {
 };
 
 export const updateAvailabilityStatus = async (workerId, status) => {
-  const allowed = ["online", "offline", "busy"];
-  if (!allowed.includes(status))
-    throw new AppError(`Status must be one of: ${allowed.join(", ")}`, 400);
+  try {
+    const allowed = ["online", "offline", "busy"];
+    if (!allowed.includes(status))
+      throw new AppError(`Status must be one of: ${allowed.join(", ")}`, 400);
 
-  const profile = await WorkerProfile.findOneAndUpdate(
-    { user: workerId },
-    { availabilityStatus: status },
-    { new: true },
-  ).select("availabilityStatus lastLocationUpdate");
+    const profile = await WorkerProfile.findOneAndUpdate(
+      { user: workerId },
+      { availabilityStatus: status },
+      { new: true },
+    ).select("availabilityStatus lastLocationUpdate");
 
-  if (!profile) throw new NotFoundError("Worker profile");
+    if (!profile) throw new NotFoundError("Worker profile");
 
-  return profile;
+    return profile;
+  } catch (e) {
+    throw e;
+  }
 };
 // ─── User يجيب location الـ worker ───────────────────────────────────────────
-export const getWorkerLocation = async (userId) => {
+export const getWorkerLocation = async (userId, workerId) => {
   // تحقق إن في booking active بين الاتنين
-  const booking = await Booking.findOne({
-    user: userId,
-    worker: workerId,
-    status: { $in: ["accepted", "in_progress"] },
-  });
-  if (!booking) throw new ForbiddenError("No active booking with this worker");
+  try {
+    const booking = await Booking.findOne({
+      user: userId,
+      worker: workerId,
+      status: { $in: ["accepted", "in_progress"] },
+    });
+    if (!booking)
+      throw new ForbiddenError("No active booking with this worker");
 
-  const worker = await User.findById(workerId)
-    .select("firstName lastName location enabledLocation")
-    .lean();
+    const workerUserId = await getWorkerUserId(workerId);
+    const worker = await User.findById(workerUserId)
+      .select("firstName lastName location enabledLocation")
+      .lean();
 
-  if (!worker) throw new NotFoundError("Worker");
-  if (!worker.enabledLocation || !worker.location?.coordinates?.length)
-    throw new AppError("Worker location not available", 404);
+    if (!worker) throw new NotFoundError("Worker");
+    if (!worker.enabledLocation || !worker.location?.coordinates?.length)
+      throw new AppError("Worker location not available", 404);
 
-  const profile = await WorkerProfile.findOne({ user: workerId })
-    .select("lastLocationUpdate availabilityStatus")
-    .lean();
+    const profile = await WorkerProfile.findOne({ user: workerId })
+      .select("lastLocationUpdate availabilityStatus")
+      .lean();
 
-  return {
-    workerId,
-    workerName: `${worker.firstName} ${worker.lastName}`,
-    location: {
-      longitude: worker.location.coordinates[0],
-      latitude: worker.location.coordinates[1],
-      updatedAt: profile?.lastLocationUpdate || null,
-    },
-    availabilityStatus: profile?.availabilityStatus || "offline",
-    bookingId: booking._id,
-  };
+    return {
+      workerId,
+      workerName: `${worker.firstName} ${worker.lastName}`,
+      location: {
+        longitude: worker.location.coordinates[0],
+        latitude: worker.location.coordinates[1],
+        updatedAt: profile?.lastLocationUpdate || null,
+      },
+      availabilityStatus: profile?.availabilityStatus || "offline",
+      bookingId: booking._id,
+    };
+  } catch (e) {
+    throw e;
+  }
 };
 
 // ─── Worker يوقف مشاركة الـ location ─────────────────────────────────────────
 export const disableWorkerLocation = async (workerId) => {
-  await User.findByIdAndUpdate(workerId, {
-    enabledLocation: false,
-    "location.coordinates": [],
-  });
+  try {
+    await User.findByIdAndUpdate(workerId, {
+      enabledLocation: false,
+      "location.coordinates": [],
+    });
 
-  await WorkerProfile.findOneAndUpdate(
-    { user: workerId },
-    { availabilityStatus: "offline" },
-  );
+    await WorkerProfile.findOneAndUpdate(
+      { user: workerId },
+      { availabilityStatus: "offline" },
+    );
 
-  return { message: "Location sharing disabled" };
+    return { message: "Location sharing disabled" };
+  } catch (e) {
+    throw e;
+  }
 };

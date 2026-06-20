@@ -13,7 +13,7 @@
   "dependencies": {
     "@getbrevo/brevo": "^4.0.1",
     "bcryptjs": "^3.0.3",
-    "cloudinary": "^2.10.0",
+    "cloudinary": "^1.41.3",
     "compression": "^1.8.1",
     "cors": "^2.8.6",
     "debug": "^4.4.3",

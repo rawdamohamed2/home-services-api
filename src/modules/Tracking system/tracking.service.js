@@ -125,11 +125,7 @@ export const getWorkerLocation = async (userId, workerId) => {
     return {
       workerId,
       workerName: `${worker.firstName} ${worker.lastName}`,
-      location: {
-        longitude: worker.location.coordinates[0],
-        latitude: worker.location.coordinates[1],
-        updatedAt: profile?.lastLocationUpdate || null,
-      },
+      location: worker.location,
       availabilityStatus: profile?.availabilityStatus || "offline",
       bookingId: booking._id,
     };

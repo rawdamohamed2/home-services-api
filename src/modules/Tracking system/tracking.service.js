@@ -121,11 +121,10 @@ export const getWorkerLocation = async (userId, workerId) => {
     const profile = await WorkerProfile.findOne({ user: workerId })
       .select("lastLocationUpdate availabilityStatus")
       .lean();
-
     return {
       workerId,
       workerName: `${worker.firstName} ${worker.lastName}`,
-      location: worker.location,
+      location: booking.location,
       availabilityStatus: profile?.availabilityStatus || "offline",
       bookingId: booking._id,
     };

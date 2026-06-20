@@ -74,7 +74,7 @@ export const updateWorkerFullProfile = async (userId, updateBody) => {
 
     await updateUser(userId, updatedUser);
 
-    await changeUserPassword(userId, password, password);
+    if (password) await changeUserPassword(userId, password, password);
 
     const updatedWorker = await WorkerProfile.findOneAndUpdate(
       { user: userId },
@@ -92,7 +92,7 @@ export const updateWorkerFullProfile = async (userId, updateBody) => {
     return updatedWorker;
   } catch (error) {
     await session.abortTransaction();
-    throw e;
+    throw error;
   } finally {
     await session.endSession();
   }

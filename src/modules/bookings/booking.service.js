@@ -22,6 +22,7 @@ import {
 import WorkerProfile from "../workers/WorkerProfile.model.js";
 import Payment from "../payments/Payment.model.js";
 import { getWorkerId } from "../workers/worker.service.js";
+import Review from "../reviews/Review.model.js";
 
 export const orderService = async (
   service,
@@ -118,13 +119,13 @@ export const fetchBookings = async (
 
     const [bookings, total] = await Promise.all([
       Booking.find(filter)
-        .select("status scheduledDate location totalAmount")
+        .select("status scheduledDate location totalAmount timeline notes")
         .populate("service", "name category")
         .populate("user", "firstName lastName phone profileImage email")
         .populate({
           path: "worker",
           select:
-            "nationalIdFront nationalIdBack licenseImage availabilityStatus bio categories",
+            "availabilityStatus bio categories ratingAverage completedJobs",
           populate: {
             path: "user",
             select: "firstName lastName phone profileImage email",
@@ -133,8 +134,7 @@ export const fetchBookings = async (
         .populate("review")
         .sort(sort)
         .skip(skip)
-        .limit(Number(limit))
-        .lean(),
+        .limit(Number(limit)),
       Booking.countDocuments(filter),
     ]);
 
@@ -161,7 +161,8 @@ export const fetchBooking = async (bookingId) => {
           path: "user",
           select: "firstName lastName phone profileImage email",
         },
-      });
+      })
+      .populate("review");
     const PaymentBooking = await getPaymentBooking(bookingId);
 
     if (!booking) throw new NotFoundError("Booking");
@@ -175,7 +176,7 @@ export const fetchBooking = async (bookingId) => {
     }
     return { PaymentBooking, booking };
   } catch (err) {
-    throw err.message;
+    throw err;
   }
 };
 

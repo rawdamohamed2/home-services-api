@@ -12,9 +12,9 @@ const router = express.Router();
 
 router.use(protect);
 
-router.post("/location", authorize("worker"), updateLocation);
-router.delete("/location", authorize("worker"), disableLocation);
-router.patch("/status", authorize("worker"), updateStatus);
+router.post("/location", authorize("worker", "user"), updateLocation);
+router.delete("/location", authorize("worker", "user"), disableLocation);
+router.patch("/status", authorize("worker", "user"), updateStatus);
 
 router.get("/worker/:workerId", getWorkerLocation);
 

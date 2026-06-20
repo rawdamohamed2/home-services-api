@@ -69,7 +69,6 @@ export const registerWorker = async (req, res) => {
 
     await checkExistingUser(email, phone);
 
-    // ✅ session بتتمرر صح دلوقتي
     const user = await createBaseAccount(
       {
         firstName,

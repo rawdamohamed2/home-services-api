@@ -53,12 +53,26 @@ const messageSchema = new mongoose.Schema(
         name: String,
       },
     ],
+    // جوه الـ messageSchema في ملف الموديل:
+
     attachments: [
       {
-        url: String,
-        type: String,
-        name: String,
-        size: Number,
+        url: {
+          type: String,
+          required: true,
+        },
+        type: {
+          type: String,
+          required: true,
+        },
+        name: {
+          type: String,
+          required: true,
+        },
+        size: {
+          type: Number,
+          required: true,
+        },
       },
     ],
 

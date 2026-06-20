@@ -14,7 +14,7 @@ const AI_API_URL = "https://servigo-ai-api--marogamil1750.replit.app/chat";
 export const getRoomMessages = async (
   roomId,
   userId,
-  { page = 1, limit = 50 } = {},
+  { page = 1, limit = 60 } = {},
 ) => {
   try {
     const room = await ChatRoom.findById(roomId);
@@ -62,7 +62,7 @@ export const createMessage = async (roomId, sender, payload) => {
       replyTo = null,
       attachments = [],
     } = payload;
-
+    console.log(attachments);
     const room = await ChatRoom.findById(roomId).populate(
       "participants",
       "firstName lastName fcmToken role",

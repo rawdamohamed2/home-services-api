@@ -30,6 +30,33 @@ export const sendMessage = async (req, res) => {
   const user = req.user;
   const data = req.body;
   try {
+    let uploadedAttachments = [];
+
+    if (req.files && req.files.length > 0) {
+      uploadedAttachments = req.files.map((file) => {
+        const fileType = file.mimetype.split("/")[0];
+        return {
+          url: file.path,
+          type: fileType,
+          name: file.originalname,
+          size: file.size,
+        };
+      });
+
+      if (!data.message || data.message.trim() === "") {
+        const firstType = uploadedAttachments[0].type;
+
+        if (firstType === "audio") {
+          data.message = " Voice Message";
+        } else if (firstType === "image") {
+          data.message = "Photo";
+        } else {
+          data.message = "Document";
+        }
+      }
+    }
+    data.attachments = uploadedAttachments;
+    console.log(data.attachments);
     const { message, room } = await messageService.createMessage(
       roomId,
       user,

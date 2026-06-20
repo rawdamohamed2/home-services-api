@@ -202,10 +202,20 @@ export const acceptCounterOffer = async (assignmentId) => {
 
 export const rejectCounterOffer = async (assignmentId) => {
   try {
-    const assignment = await BookingAssignment.findById(assignmentId).populate({
-      path: "booking",
-      populate: { path: "service", select: "name" },
-    });
+    const assignment = await BookingAssignment.findById(assignmentId)
+      .populate({
+        path: "booking",
+        populate: { path: "service", select: "name" },
+      })
+      .populate({
+        path: "worker",
+        select:
+          "nationalIdFront nationalIdBack licenseImage availabilityStatus bio categories",
+        populate: {
+          path: "user",
+          select: "firstName lastName phone profileImage email",
+        },
+      });
 
     if (!assignment) throw new NotFoundError("Assignment");
 

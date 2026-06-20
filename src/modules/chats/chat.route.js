@@ -21,7 +21,7 @@ import {
   IdValidation,
   RatingValidation,
 } from "../support/supportTicket.validtion.js";
-
+import { upload } from "../../core/services/uploader.js";
 const router = express.Router();
 
 router.use(protect);
@@ -47,6 +47,7 @@ router.patch(
   checkPermission("manage_ChatAndReviews"),
   roomCtrl.closeRoom,
 );
+router.get("/rooms/:bookingId/chat", roomCtrl.getUserWorkerChat);
 
 // ═══════════════════════════════════════════════════════════════════
 // MESSAGES
@@ -63,6 +64,7 @@ router.get(
 );
 router.post(
   "/rooms/:roomId/messages",
+  upload.array("attachments", 5),
   validate(sendMessageValidation),
   msgCtrl.sendMessage,
 );

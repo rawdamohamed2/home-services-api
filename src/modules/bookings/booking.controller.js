@@ -74,7 +74,7 @@ export const editBooking = async (req, res) => {
       location,
       selectedOptions,
     );
-    console.log(newBooking);
+
     ApiResponse.success(
       res,
       { newBooking, dispatch },

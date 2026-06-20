@@ -9,7 +9,7 @@ export const onBookingAccepted = async (booking) => {
       booking.user,
       booking.worker.user._id,
     );
-    console.log(booking.worker.user._id);
+
     emitToUser(booking.user, EVENTS.WORKER_ASSIGNED, {
       bookingId: booking._id,
       chatRoomId: room._id,

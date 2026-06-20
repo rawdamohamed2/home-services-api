@@ -7,25 +7,89 @@ import {
 } from "../../core/utils/Errors.js";
 import ChatRoom from "../chats/ChatRoom.model.js";
 import mongoose from "mongoose";
+import User from "../users/user.model.js";
+
+export const getAvailableAdmins = async () => {
+  const rolesWithPermission = await mongoose
+    .model("RolePermission")
+    .find({ permissions: "manage_ChatAndReviews" })
+    .select("role")
+    .lean();
+
+  if (!rolesWithPermission.length)
+    throw new AppError("No support roles configured", 503);
+
+  const allowedRoles = rolesWithPermission.map((r) => r.role);
+
+  const availableAdmins = await mongoose
+    .model("User")
+    .find({
+      role: { $in: allowedRoles },
+      isBlocked: false,
+    })
+    .select("_id")
+    .lean();
+
+  if (!availableAdmins.length)
+    throw new AppError("No support agent available", 503);
+
+  return availableAdmins;
+};
 
 // ─── Create ticket + auto-open support room ───────────────────────────────────
 export const createTicket = async (
   userId,
-  { subject, description, priority, attachments },
+  { subject = "Customer issue", description = "", priority, attachments },
 ) => {
-  const ticket = await SupportTicket.create({
-    user: userId,
-    subject,
-    description,
-    priority: priority || "medium",
-    attachments: attachments || [],
-  });
+  try {
+    const existingTicket = await SupportTicket.findOne({
+      user: userId,
+      status: { $in: ["open", "in_progress"] },
+    }).lean();
 
-  const room = await getOrCreateSupportRoom(userId, ticket._id);
-  ticket.chatRoom = room._id;
-  await ticket.save();
+    if (existingTicket) {
+      console.log("User already has an active ticket. Returning existing one.");
 
-  return { ticket, room };
+      let room = await getOrCreateSupportRoom(userId, existingTicket._id);
+
+      if (room && typeof room.toObject === "function") {
+        room = room.toObject();
+      }
+
+      return { ticket: existingTicket, room };
+    }
+
+    const availableAdmins = await getAvailableAdmins();
+    let assignedAdminId = null;
+
+    if (availableAdmins.length > 0) {
+      const randomIndex = Math.floor(Math.random() * availableAdmins.length);
+      assignedAdminId = availableAdmins[randomIndex]._id;
+    }
+
+    const ticket = await SupportTicket.create({
+      user: userId,
+      subject: subject,
+      description: description,
+      priority: priority || "medium",
+      assignedTo: assignedAdminId,
+      attachments: attachments || [],
+      status: assignedAdminId ? "in_progress" : "open",
+    });
+
+    const room = await getOrCreateSupportRoom(
+      userId,
+      ticket._id,
+      assignedAdminId,
+    );
+
+    ticket.chatRoom = room._id;
+    await ticket.save();
+
+    return { ticket, room };
+  } catch (e) {
+    throw e;
+  }
 };
 
 // ─── Get user's tickets ───────────────────────────────────────────────────────

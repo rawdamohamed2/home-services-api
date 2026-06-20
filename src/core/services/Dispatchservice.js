@@ -3,6 +3,7 @@ import { AppError } from "../utils/Errors.js";
 import Booking from "../../modules/bookings/Booking.model.js";
 import BookingAssignment from "../../modules/bookingAssignment/BookingAssignment.model.js";
 import { notifyNewOffer } from "../../modules/notifications/Notification.service.js";
+import { fetchWorkerById } from "../../modules/workers/worker.service.js";
 
 export const dispatchBooking = async (bookingId) => {
   const booking = await Booking.findById(bookingId)
@@ -43,9 +44,11 @@ export const dispatchBooking = async (bookingId) => {
     if (!workerAssignment) return Promise.resolve();
 
     return notifyNewOffer(
-      w.workerUserId,
+      w.workerUser._id,
       {
         serviceName: booking.service?.name,
+        clientName: `${booking.user.firstName} ${booking.user.lastName}`,
+        worker_name: `${w.workerUser.firstName} ${w.workerUser.lastName}`,
         price: booking.totalAmount,
         booking_id: booking._id,
         location: booking.location,

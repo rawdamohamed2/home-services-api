@@ -12,7 +12,7 @@ import { fetchBookings } from "../bookings/booking.service.js";
 import { normalizePhone } from "../../core/utils/normalizePhone.js";
 import { timeRegex, validDays } from "../../core/utils/validation.helper.js";
 import { onBookingCompleted } from "../../core/services/Bookingchat.integration.js";
-
+import { getTransactions, getWallet } from "../wallet/wallet.service.js";
 export const getUserIdsByName = async (name) => {
   try {
     if (!name) return null;
@@ -42,8 +42,17 @@ export const getCategoryIdByName = async (categoryName) => {
 export const getWorkerId = async (userId) => {
   try {
     const worker = await WorkerProfile.findOne({ user: userId });
-    if (!worker) return NotFoundError("Worker");
+    if (!worker) throw new NotFoundError("Chat room");
     return worker._id;
+  } catch (error) {
+    throw error;
+  }
+};
+export const getWorkerUserId = async (workerId) => {
+  try {
+    const worker = await WorkerProfile.findById(workerId);
+    if (!worker) throw new NotFoundError("Worker");
+    return worker.user;
   } catch (error) {
     throw error;
   }
@@ -89,29 +98,28 @@ export const updateWorkerFullProfile = async (userId, updateBody) => {
   }
 };
 
-// export const getFullWorkerProfile = async (userId) => {
-//   try {
-//     const profile = await WorkerProfile.findOne({ user: userId })
-//       .populate(
-//         "user",
-//         "firstName lastName email phone profileImage isVerified",
-//       )
-//       .populate("categories", "name")
-//       .select(
-//         "experienceYears city availabilityStatus availability bio approvalStatus createdAt",
-//       );
-//
-//     if (!profile) throw new Error("Worker profile not found");
-//
-//     const wallet = await Wallet.findOne({ owner: userId }).select(
-//       "balance currency isActive",
-//     );
-//
-//     return { profile, wallet };
-//   } catch (error) {
-//     throw new Error(error.message);
-//   }
-// };
+export const getFullWorkerProfile = async (userId) => {
+  try {
+    const workerId = await getWorkerId(userId);
+    const profile = await WorkerProfile.findOne({ user: userId })
+      .populate(
+        "user",
+        "firstName lastName email phone profileImage isVerified",
+      )
+      .populate("categories", "name")
+      .select(
+        "experienceYears city availabilityStatus availability bio approvalStatus createdAt",
+      );
+
+    if (!profile) throw new Error("Worker profile not found");
+
+    const reviews = getWorkerReviews(userId);
+
+    return { profile, reviews };
+  } catch (error) {
+    throw new Error(error.message);
+  }
+};
 
 export const updateGeoLocation = async (userId, lat, lng) => {
   if (!userId) throw new Error("User ID is required");
@@ -253,7 +261,7 @@ export const updateWorkerAvailability = async (userId, availability) => {
   }
 };
 
-export const deleteworker = async (userId) => {
+export const deleteWorker = async (userId) => {
   try {
     const deletedProfile = await WorkerProfile.findOneAndDelete({
       user: userId,
@@ -271,6 +279,7 @@ export const deleteworker = async (userId) => {
 };
 
 export const markBookingComplete = async (id, userId) => {
+  const session = await mongoose.startSession();
   try {
     session.startTransaction();
 
@@ -308,16 +317,16 @@ export const markBookingComplete = async (id, userId) => {
     await Promise.allSettled([
       onBookingCompleted(booking),
 
-      await notifyBookingCompleted(booking.user._id, {
-        title: "Service Completed",
-        metadata: {
+      await notifyBookingCompleted(
+        booking.user._id,
+        {
           booking_id: booking._id.toString(),
           service_name: booking.service.name,
           fair: booking.totalAmount,
           customer_name: `${booking.user.firstName} ${booking.user.lastName}`,
         },
-        messageData: { serviceName: booking.service.name },
-      }),
+        { serviceName: booking.service.name },
+      ),
     ]);
 
     return booking;
@@ -331,6 +340,57 @@ export const markBookingComplete = async (id, userId) => {
 
 //-------------------------------------
 
+export const getWorkerDashboardData = async (userId) => {
+  try {
+    const workerId = await getWorkerId(userId);
+
+    const [ongoingProjects, recentProjects] = await Promise.all([
+      Booking.find({
+        worker: workerId,
+        status: { $in: ["accepted", "in_progress"] },
+      })
+        .select("scheduledDate totalAmount")
+        .populate("service", "name")
+        .sort("scheduledDate")
+        .limit(5)
+        .lean(),
+
+      Booking.find({
+        worker: workerId,
+        status: { $in: ["completed", "cancelled"] },
+      })
+        .select("scheduledDate totalAmount")
+        .populate("service", "name")
+        .sort("-createdAt")
+        .limit(5)
+        .lean(),
+    ]);
+    const walletData = await getWallet(userId);
+    const { transactions: transactionList } = await getTransactions(userId, {
+      source: "booking_payment",
+    });
+
+    const histories = transactionList.map((t) => ({
+      serviceName: t.serviceName,
+      categoryName: t.categoryName,
+      price: t.totalAmount,
+    }));
+
+    return {
+      ongoingProjects,
+      recentProjects,
+      earningSummary: {
+        balance: walletData.balance,
+        pendingEarnings: walletData.pendingEarnings,
+      },
+      earningHistory: histories.slice(5),
+    };
+  } catch (error) {
+    throw error;
+  }
+};
+
+//-------------------------------------
 export const fetchAllWorkers = async (filters) => {
   try {
     const { page = 1, limit = 10, category, status, name, id } = filters;
@@ -359,16 +419,24 @@ export const fetchAllWorkers = async (filters) => {
       query.user = { $in: userIds };
     }
 
-    const [workers, total] = await Promise.all([
+    const [workersRaw, total] = await Promise.all([
       WorkerProfile.find(query)
         .select(" approvalStatus ratingAverage ")
         .populate("user", "firstName lastName email profileImage")
         .populate({ path: "categories", select: "name" })
         .limit(parseInt(limit))
         .skip(skip)
-        .sort("-ratingAverage"),
+        .sort("-ratingAverage")
+        .lean(),
       WorkerProfile.countDocuments(query),
     ]);
+    const workers = workersRaw.map((worker) => {
+      if (worker.user) {
+        worker.user.fullName =
+          `${worker.user.firstName || ""} ${worker.user.lastName || ""}`.trim();
+      }
+      return worker;
+    });
 
     return {
       workers,
@@ -527,6 +595,30 @@ const editWorkerProfile = async (workerId, workerInfo = {}, session) => {
     await profile.save({ session });
 
     return profile;
+  } catch (e) {
+    throw e;
+  }
+};
+
+export const viewWorkerProfile = async (userId, workerId, bookingId) => {
+  try {
+    const profile = await WorkerProfile.findOne({
+      $or: [{ _id: workerId }, { user: userId }],
+    })
+      .populate(
+        "user",
+        "firstName lastName email phone profileImage isVerified",
+      )
+      .populate("categories", "name")
+      .select(
+        "experienceYears city availabilityStatus availability bio approvalStatus createdAt",
+      );
+    if (!profile) throw new NotFoundError("Worker");
+
+    return {
+      worker: profile,
+      bookingId: bookingId || null,
+    };
   } catch (e) {
     throw e;
   }

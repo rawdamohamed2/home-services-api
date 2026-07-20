@@ -150,8 +150,8 @@ src/
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/your-username/servigo-api.git
-cd servigo-api
+git clone https://github.com/rawdamohamed2/home-services-api
+cd home-services-api
 ```
 
 ### 2. Install dependencies

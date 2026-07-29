@@ -412,8 +412,3 @@ WalletTransaction Withdrawal         RolePermission
 | `worker` | Receive requests, chat, and location tracking |
 | `user` | Request services, pay, and leave reviews |
 
----
-
-## 📝 License
-
-MIT
